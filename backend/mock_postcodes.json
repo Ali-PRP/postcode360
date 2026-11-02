@@ -1,0 +1,28 @@
+{
+  "FC-02-A09-DB-09": {
+    "postcode": "FC-02-A09-DB-09",
+    "formatted": "FC 02 A09 DB 09",
+    "state": "Federal Capital Territory",
+    "lga": "Abuja Municipal (AMAC)",
+    "district": "Wuse II",
+    "street": "Adetokunbo Ademola Crescent",
+    "lat": 9.0765,
+    "lng": 7.4892,
+    "building_polygon": [[7.4891, 9.0764], [7.4893, 9.0764], [7.4893, 9.0766], [7.4891, 9.0766], [7.4891, 9.0764]],
+    "confidence": 0.98,
+    "verified": true
+  },
+  "FC-01-A01-KP-27": {
+    "postcode": "FC-01-A01-KP-27",
+    "formatted": "FC 01 A01 KP 27",
+    "state": "Federal Capital Territory",
+    "lga": "Abuja Municipal (AMAC)",
+    "district": "Garki",
+    "street": "Tafawa Balewa Way",
+    "lat": 9.0354,
+    "lng": 7.4898,
+    "building_polygon": [[7.4897, 9.0353], [7.4899, 9.0353], [7.4899, 9.0355], [7.4897, 9.0355], [7.4897, 9.0353]],
+    "confidence": 0.97,
+    "verified": true
+  }
+}
