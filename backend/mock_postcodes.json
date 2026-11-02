@@ -1,28 +1,102 @@
-{
+﻿{
   "FC-02-A09-DB-09": {
     "postcode": "FC-02-A09-DB-09",
     "formatted": "FC 02 A09 DB 09",
     "state": "Federal Capital Territory",
-    "lga": "Abuja Municipal (AMAC)",
+    "lga": "AMAC",
     "district": "Wuse II",
     "street": "Adetokunbo Ademola Crescent",
     "lat": 9.0765,
     "lng": 7.4892,
-    "building_polygon": [[7.4891, 9.0764], [7.4893, 9.0764], [7.4893, 9.0766], [7.4891, 9.0766], [7.4891, 9.0764]],
+    "building_polygon": [
+      [7.4891, 9.0764],
+      [7.4893, 9.0764],
+      [7.4893, 9.0766],
+      [7.4891, 9.0766],
+      [7.4891, 9.0764]
+    ],
     "confidence": 0.98,
-    "verified": true
+    "verified": true,
+    "is_alias": false
   },
-  "FC-01-A01-KP-27": {
-    "postcode": "FC-01-A01-KP-27",
-    "formatted": "FC 01 A01 KP 27",
+  "FC-02-B12-GA-01": {
+    "postcode": "FC-02-B12-GA-01",
+    "formatted": "FC 02 B12 GA 01",
     "state": "Federal Capital Territory",
-    "lga": "Abuja Municipal (AMAC)",
-    "district": "Garki",
-    "street": "Tafawa Balewa Way",
-    "lat": 9.0354,
-    "lng": 7.4898,
-    "building_polygon": [[7.4897, 9.0353], [7.4899, 9.0353], [7.4899, 9.0355], [7.4897, 9.0355], [7.4897, 9.0353]],
+    "lga": "AMAC",
+    "district": "Garki Area 11",
+    "street": "Ahmadu Bello Way",
+    "lat": 9.0385,
+    "lng": 7.5012,
+    "building_polygon": [
+      [7.5011, 9.0384],
+      [7.5013, 9.0384],
+      [7.5013, 9.0386],
+      [7.5011, 9.0386],
+      [7.5011, 9.0384]
+    ],
     "confidence": 0.97,
-    "verified": true
+    "verified": true,
+    "is_alias": false
+  },
+  "FC-01-M04-MA-03": {
+    "postcode": "FC-01-M04-MA-03",
+    "formatted": "FC 01 M04 MA 03",
+    "state": "Federal Capital Territory",
+    "lga": "AMAC",
+    "district": "Maitama",
+    "street": "Aguiyi Ironsi Street",
+    "lat": 9.0882,
+    "lng": 7.4934,
+    "building_polygon": [
+      [7.4933, 9.0881],
+      [7.4935, 9.0881],
+      [7.4935, 9.0883],
+      [7.4933, 9.0883],
+      [7.4933, 9.0881]
+    ],
+    "confidence": 0.99,
+    "verified": true,
+    "is_alias": false
+  },
+  "FC-01-C01-CB-05": {
+    "postcode": "FC-01-C01-CB-05",
+    "formatted": "FC 01 C01 CB 05",
+    "state": "Federal Capital Territory",
+    "lga": "AMAC",
+    "district": "Central Business District",
+    "street": "Shehu Shagari Way",
+    "lat": 9.0579,
+    "lng": 7.4951,
+    "building_polygon": [
+      [7.4950, 9.0578],
+      [7.4952, 9.0578],
+      [7.4952, 9.0580],
+      [7.4950, 9.0580],
+      [7.4950, 9.0578]
+    ],
+    "confidence": 0.98,
+    "verified": true,
+    "is_alias": false
+  },
+  "FC-03-J07-JB-11": {
+    "postcode": "FC-03-J07-JB-11",
+    "formatted": "FC 03 J07 JB 11",
+    "state": "Federal Capital Territory",
+    "lga": "AMAC",
+    "district": "Jabi",
+    "street": "Bala Sokoto Way",
+    "lat": 9.0642,
+    "lng": 7.4245,
+    "building_polygon": [
+      [7.4244, 9.0641],
+      [7.4246, 9.0641],
+      [7.4246, 9.0643],
+      [7.4244, 9.0643],
+      [7.4244, 9.0641]
+    ],
+    "confidence": 0.96,
+    "verified": true,
+    "is_alias": false
   }
 }
