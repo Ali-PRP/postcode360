@@ -12,6 +12,10 @@ class LookupRequest(BaseModel):
 
 class PostcodeData(BaseModel):
     postcode: str = Field(..., examples=["FC-02-A09-DB-09"])
+    customer_name: Optional[str] = Field(default="Walk-in Customer")
+    customer_phone: Optional[str] = Field(default="+2348030000000")
+    amount_ngn: Optional[float] = Field(default=15500.0)
+    notes: Optional[str] = None
     formatted: str = Field(..., examples=["FC 02 A09 DB 09"])
     state: str = Field(..., examples=["Federal Capital Territory"])
     lga: str = Field(..., examples=["AMAC"])
@@ -89,6 +93,10 @@ class OrderResponse(BaseModel):
     order_id: str = Field(..., examples=["b4a1c2d3-e4f5-6789-abcd-ef0123456789"])
     idempotency_key: str = Field(..., examples=["ord-wuse2-2026-001"])
     postcode: str = Field(..., examples=["FC-02-A09-DB-09"])
+    customer_name: Optional[str] = Field(default="Walk-in Customer")
+    customer_phone: Optional[str] = Field(default="+2348030000000")
+    amount_ngn: Optional[float] = Field(default=15500.0)
+    notes: Optional[str] = None
     delivery_address: str = Field(..., examples=["Adetokunbo Ademola Crescent, Wuse II, AMAC"])
     lat: float = Field(..., examples=[9.0765])
     lng: float = Field(..., examples=[7.4892])

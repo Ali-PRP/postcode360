@@ -412,10 +412,14 @@ async def create_order(payload: OrderCreateRequest, db: Optional[Session] = Depe
         try:
             row = db.execute(
                 text("""
-                    INSERT INTO orders (idempotency_key, postcode, delivery_location, status)
+                    INSERT INTO orders (
+                        idempotency_key, merchant_origin, postcode,
+                        customer_name, customer_phone, amount_ngn, notes,
+                        delivery_location, status
+                    )
                     VALUES (
-                        :idem_key,
-                        :postcode,
+                        :idem_key, 'http://localhost:5173', :postcode,
+                        :cname, :cphone, :amt, :notes,
                         ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
                         'PENDING'
                     )
@@ -424,6 +428,10 @@ async def create_order(payload: OrderCreateRequest, db: Optional[Session] = Depe
                 {
                     "idem_key": payload.idempotency_key,
                     "postcode": place.postcode,
+                    "cname": payload.customer_name or "Walk-in Customer",
+                    "cphone": payload.customer_phone or "+2348030000000",
+                    "amt": payload.amount_ngn or 15500.0,
+                    "notes": payload.notes,
                     "lng": place.lng,
                     "lat": place.lat,
                 },
@@ -658,3 +666,52 @@ def find_nearest_emergency(
         count=len(fallback_emergency),
         results=fallback_emergency,
     )
+
+
+@app.get("/orders", response_model=List[OrderResponse], tags=["Orders & Dispatch"])
+@app.get("/v1/orders", response_model=List[OrderResponse], tags=["Orders & Dispatch"])
+async def list_orders(limit: int = Query(default=50, ge=1, le=200), db: Optional[Session] = Depends(get_db)):
+    """
+    Returns the live order list for Teammate A (Admin Dashboard) and Teammate B (Rider App).
+    """
+    results: List[OrderResponse] = []
+    if db is not None:
+        try:
+            rows = db.execute(
+                text("""
+                    SELECT id, idempotency_key, postcode, customer_name, customer_phone, amount_ngn, notes, status,
+                           ST_Y(delivery_location::geometry) AS lat,
+                           ST_X(delivery_location::geometry) AS lng
+                    FROM orders
+                    ORDER BY created_at DESC NULLS LAST
+                    LIMIT :limit
+                """),
+                {"limit": limit},
+            ).mappings().all()
+            registry = load_mock_registry()
+            for r in rows:
+                code_str = r["postcode"]
+                place = registry.get(code_str, {})
+                addr = f"{place.get('street', '')}, {place.get('district', '')}, {place.get('lga', 'AMAC')}".strip(", ")
+                results.append(
+                    OrderResponse(
+                        idempotent_replay=False,
+                        order_id=str(r["id"]),
+                        idempotency_key=r["idempotency_key"],
+                        postcode=code_str,
+                        customer_name=r.get("customer_name") or "Walk-in Customer",
+                        customer_phone=r.get("customer_phone") or "+2348030000000",
+                        amount_ngn=float(r.get("amount_ngn") or 0.0),
+                        notes=r.get("notes"),
+                        delivery_address=addr or code_str,
+                        lat=float(r["lat"]),
+                        lng=float(r["lng"]),
+                        building_polygon=place.get("building_polygon"),
+                        order_status=str(r.get("status") or "PENDING"),
+                    )
+                )
+            if results:
+                return results
+        except Exception:
+            db.rollback()
+    return list(_IN_MEMORY_ORDERS.values())
