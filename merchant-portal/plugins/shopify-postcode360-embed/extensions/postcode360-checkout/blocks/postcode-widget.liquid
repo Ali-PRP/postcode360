@@ -1,0 +1,116 @@
+{% comment %}
+  Task #6: postcode360 Shopify Theme App Extension Block
+  Resolves NIPOST / Temporary Postcodes (POST /v1/lookup) and attaches coordinates to Shopify Cart attributes
+{% endcomment %}
+
+<div
+  id="postcode360-shopify-widget"
+  data-api-base="{{ block.settings.api_base_url }}"
+  data-publishable-key="{{ block.settings.publishable_key }}"
+  style="border: 1px solid #27272a; border-radius: 14px; padding: 16px; background: #08080A; color: #F4F4F6; font-family: system-ui, sans-serif; margin: 12px 0;"
+>
+  <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px;">
+    <span style="font-size: 13px; font-weight: 600;">
+      📍 postcode360 — Nigerian Spatial Address Lookup
+    </span>
+    <span style="font-size: 10px; font-family: monospace; padding: 2px 8px; border-radius: 999px; background: rgba(16, 185, 129, 0.12); color: #34D399;">
+      ZERO-PII • POSTGIS
+    </span>
+  </div>
+
+  <div style="display: flex; gap: 8px;">
+    <input
+      type="text"
+      id="postcode360-input"
+      name="attributes[postcode360_code]"
+      value="FC-02-A09-DB-09"
+      placeholder="FC-02-A09-DB-09"
+      style="flex: 1; height: 38px; padding: 0 12px; border-radius: 10px; border: 1px solid #27272a; background: #101012; color: #ffffff; font-family: monospace; font-size: 12px;"
+    />
+    <button
+      type="button"
+      onclick="window.resolvePostcode360Shopify()"
+      style="height: 38px; padding: 0 16px; border-radius: 10px; border: none; background: #10B981; color: #000000; font-weight: 600; font-size: 12px; cursor: pointer;"
+    >
+      Resolve Address
+    </button>
+  </div>
+
+  <input type="hidden" id="postcode360-lat" name="attributes[postcode360_lat]" value="" />
+  <input type="hidden" id="postcode360-lng" name="attributes[postcode360_lng]" value="" />
+
+  <div
+    id="postcode360-status"
+    style="margin-top: 8px; font-size: 11px; font-family: monospace; color: #A1A1AA;"
+  >
+    Enter your NIPOST postcode or Abuja pilot bookmark above.
+  </div>
+</div>
+
+<script>
+  window.resolvePostcode360Shopify = async function () {
+    const root = document.getElementById('postcode360-shopify-widget');
+    const apiBase = root.getAttribute('data-api-base') || 'http://localhost:8000';
+    const code = document.getElementById('postcode360-input').value.trim();
+    const statusEl = document.getElementById('postcode360-status');
+
+    statusEl.style.color = '#38BDF8';
+    statusEl.textContent = 'Resolving postcode via 3-tier lookup...';
+
+    try {
+      const response = await fetch(apiBase + '/v1/lookup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ code: code, force_mock: true }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Postcode not found');
+      }
+
+      const result = await response.json();
+      const place = result.data;
+
+      document.getElementById('postcode360-lat').value = place.lat;
+      document.getElementById('postcode360-lng').value = place.lng;
+
+      statusEl.style.color = '#34D399';
+      statusEl.textContent =
+        '✓ Verified: ' +
+        place.street +
+        ', ' +
+        place.district +
+        ', ' +
+        place.lga +
+        ' [' +
+        result.source +
+        ' • ' +
+        result.latency_ms +
+        'ms]';
+    } catch (err) {
+      statusEl.style.color = '#F87171';
+      statusEl.textContent = '✕ Could not resolve postcode. Check code and try again.';
+    }
+  };
+</script>
+
+{% schema %}
+{
+  "name": "postcode360 Lookup",
+  "target": "section",
+  "settings": [
+    {
+      "type": "text",
+      "id": "publishable_key",
+      "label": "Origin-Bound Publishable Key",
+      "default": "pk_test_findam_abuja_01"
+    },
+    {
+      "type": "text",
+      "id": "api_base_url",
+      "label": "postcode360 FastAPI URL",
+      "default": "http://localhost:8000"
+    }
+  ]
+}
+{% endschema %}

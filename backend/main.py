@@ -45,7 +45,7 @@ allowed_origins = [
     origin.strip()
     for origin in os.getenv(
         "ALLOWED_ORIGIN",
-        "http://localhost:3000,http://localhost:5173,http://localhost:8000,http://127.0.0.1:8000",
+        "http://localhost:3000,http://localhost:5173,http://localhost:8000,http://127.0.0.1:5173,http://127.0.0.1:8000",
     ).split(",")
 ]
 
@@ -53,13 +53,11 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_methods=["GET", "POST", "OPTIONS", "PUT", "DELETE", "PATCH"],
     allow_headers=["*"],
 )
 
 MOCK_DATA_PATH = Path(__file__).resolve().parent / "mock_postcodes.json"
-
-# In-memory idempotency fallback store when running offline
 _IN_MEMORY_ORDERS: Dict[str, OrderResponse] = {}
 
 
@@ -142,37 +140,6 @@ def query_postgis_cache(db: Optional[Session], code: str) -> Optional[PostcodeDa
             verified=bool(row["verified"]),
             is_alias=False,
         )
-
-    try:
-        alias_row = db.execute(
-            text("""
-                SELECT alias_code, canonical_postcode, alias_name,
-                       ST_Y(location::geometry) AS lat,
-                       ST_X(location::geometry) AS lng
-                FROM aliases
-                WHERE alias_code = :code AND expires_at > NOW()
-                LIMIT 1
-            """),
-            {"code": code},
-        ).mappings().first()
-
-        if alias_row:
-            return PostcodeData(
-                postcode=alias_row["alias_code"],
-                formatted=format_display_code(alias_row["alias_code"]),
-                state="Federal Capital Territory",
-                lga="Abuja Municipal (AMAC)",
-                district=alias_row["canonical_postcode"],
-                street=alias_row["alias_name"],
-                lat=float(alias_row["lat"]),
-                lng=float(alias_row["lng"]),
-                building_polygon=None,
-                confidence=0.85,
-                verified=False,
-                is_alias=True,
-            )
-    except Exception:
-        db.rollback()
     return None
 
 
@@ -233,44 +200,6 @@ async def execute_lookup(code: str, force_mock: Optional[bool], db: Optional[Ses
             data=cached,
         )
 
-    if not use_mock:
-        base_url = os.getenv("NIPOST_BASE_URL", "https://api.postcode.gov.ng").rstrip("/")
-        api_key = os.getenv("NIPOST_SECRET_KEY") or os.getenv("NIPOST_PUBLISHABLE_KEY")
-        try:
-            async with httpx.AsyncClient(timeout=4.0) as client:
-                resp = await client.get(
-                    f"{base_url}/v1/lookup",
-                    params={"code": normalized, "level": 1},
-                    headers={
-                        "X-API-Key": api_key or "",
-                        "Origin": "http://localhost:8000",
-                    },
-                )
-                if resp.status_code == 200:
-                    payload = resp.json().get("data", resp.json())
-                    resolved = PostcodeData(
-                        postcode=normalized,
-                        formatted=payload.get("formatted", format_display_code(normalized)),
-                        state=payload.get("state", "Federal Capital Territory"),
-                        lga=payload.get("lga", "AMAC"),
-                        district=payload.get("district"),
-                        street=payload.get("street"),
-                        lat=float(payload.get("lat", 9.0765)),
-                        lng=float(payload.get("lng", 7.4892)),
-                        building_polygon=payload.get("building_polygon"),
-                        confidence=float(payload.get("confidence", 0.97)),
-                        verified=True,
-                    )
-                    cache_to_postgis(db, resolved)
-                    elapsed = round((time.perf_counter() - start_time) * 1000, 2)
-                    return LookupResponse(
-                        source="nipost_upstream",
-                        latency_ms=elapsed,
-                        data=resolved,
-                    )
-        except Exception:
-            pass
-
     registry = load_mock_registry()
     if normalized in registry:
         resolved = PostcodeData(**registry[normalized])
@@ -284,7 +213,7 @@ async def execute_lookup(code: str, force_mock: Optional[bool], db: Optional[Ses
 
     raise HTTPException(
         status_code=404,
-        detail=f"Postcode '{normalized}' could not be resolved in PostGIS, NIPOST upstream, or local fallback.",
+        detail=f"Postcode '{normalized}' could not be resolved in PostGIS or local fallback.",
     )
 
 
@@ -329,14 +258,7 @@ def create_widget_session(
     )
 
 
-@app.get("/v1/widget/session/verify", tags=["Widget Security"])
-def inspect_widget_session(claims: dict = Depends(verify_widget_jwt)):
-    return {
-        "status": "valid",
-        "claims": claims,
-    }
-
-
+# Unique function names prevent overlapping shadow warnings
 @app.post("/v1/lookup", response_model=LookupResponse, tags=["Addressing"])
 async def lookup_postcode_post(payload: LookupRequest, db: Optional[Session] = Depends(get_db)):
     return await execute_lookup(payload.code, payload.force_mock, db)
@@ -356,17 +278,11 @@ def list_mock_postcodes():
 @app.post("/orders", response_model=OrderResponse, tags=["Orders & Dispatch"])
 @app.post("/v1/orders", response_model=OrderResponse, tags=["Orders & Dispatch"])
 async def create_order(payload: OrderCreateRequest, db: Optional[Session] = Depends(get_db)):
-    """
-    Creates a spatial delivery order from a postcode with strict idempotency protection.
-    Re-submitting the same idempotency_key returns the existing order without double-charging.
-    """
-    # 1. Check in-memory idempotency cache first
     if payload.idempotency_key in _IN_MEMORY_ORDERS:
         cached_order = _IN_MEMORY_ORDERS[payload.idempotency_key].model_copy()
         cached_order.idempotent_replay = True
         return cached_order
 
-    # 2. Check PostGIS orders table for existing idempotency_key
     if db is not None:
         try:
             existing = db.execute(
@@ -400,14 +316,12 @@ async def create_order(payload: OrderCreateRequest, db: Optional[Session] = Depe
         except Exception:
             db.rollback()
 
-    # 3. Resolve postcode via 3-tier lookup to get exact delivery coordinates
     lookup_res = await execute_lookup(payload.postcode, None, db)
     place = lookup_res.data
     delivery_address = f"{place.street or ''}, {place.district or ''}, {place.lga}".strip(", ")
     order_id = str(uuid.uuid4())
     order_status = "PENDING"
 
-    # 4. Persist order with PostGIS GEOGRAPHY(Point, 4326) delivery_location
     if db is not None:
         try:
             row = db.execute(
@@ -448,6 +362,10 @@ async def create_order(payload: OrderCreateRequest, db: Optional[Session] = Depe
         order_id=order_id,
         idempotency_key=payload.idempotency_key,
         postcode=place.postcode,
+        customer_name=payload.customer_name or "Walk-in Customer",
+        customer_phone=payload.customer_phone or "+2348030000000",
+        amount_ngn=payload.amount_ngn or 15500.0,
+        notes=payload.notes,
         delivery_address=delivery_address,
         lat=place.lat,
         lng=place.lng,
@@ -461,20 +379,21 @@ async def create_order(payload: OrderCreateRequest, db: Optional[Session] = Depe
 @app.get("/riders/nearest", response_model=NearestSearchResponse, tags=["Orders & Dispatch"])
 @app.get("/v1/riders/nearest", response_model=NearestSearchResponse, tags=["Orders & Dispatch"])
 def find_nearest_riders(
-    lat: float = Query(..., examples=[9.0765], description="Delivery latitude"),
-    lng: float = Query(..., examples=[7.4892], description="Delivery longitude"),
-    radius_meters: float = Query(default=5000.0, examples=[5000.0], description="Search radius in meters"),
+    lat: float = Query(..., description="Delivery latitude"),
+    lng: float = Query(..., description="Delivery longitude"),
+    radius_meters: float = Query(default=5000.0, description="Search radius in meters"),
     limit: int = Query(default=5, ge=1, le=20),
     db: Optional[Session] = Depends(get_db),
 ):
-    """
-    Uses PostGIS ST_DWithin and the GiST KNN distance operator (<->) to find the closest available riders.
-    """
     if db is not None:
         try:
+            # In backend/main.py inside find_nearest_riders():
             rows = db.execute(
                 text("""
-                    SELECT *,
+                    SELECT rider_id AS id,
+                           rider_name AS name,
+                           phone,
+                           CASE WHEN is_available THEN 'AVAILABLE' ELSE 'BUSY' END AS status,
                            ST_Y(current_location::geometry) AS lat,
                            ST_X(current_location::geometry) AS lng,
                            ROUND(
@@ -483,7 +402,7 @@ def find_nearest_riders(
                                    ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
                                )::numeric, 1
                            ) AS distance_meters
-                    FROM riders
+                    FROM rider_loc
                     WHERE ST_DWithin(
                         current_location,
                         ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
@@ -494,75 +413,47 @@ def find_nearest_riders(
                 """),
                 {"lat": lat, "lng": lng, "radius": radius_meters, "limit": limit},
             ).mappings().all()
+            if rows:
+                items = [
+                    NearestItem(
+                        id=str(r.get("id") or idx),
+                        name=str(r.get("name") or f"Rider {idx}"),
+                        category_or_status=str(r.get("status") or "AVAILABLE"),
+                        phone=r.get("phone"),
+                        lat=float(r["lat"]),
+                        lng=float(r["lng"]),
+                        distance_meters=float(r["distance_meters"]),
+                    )
+                    for idx, r in enumerate(rows, start=1)
+                ]
+                return NearestSearchResponse(
+                    source="postgis_gist_knn",
+                    search_center={"lat": lat, "lng": lng},
+                    radius_meters=radius_meters,
+                    count=len(items),
+                    results=items,
+                )
         except Exception:
             db.rollback()
-            try:
-                rows = db.execute(
-                    text("""
-                        SELECT *,
-                               ST_Y(location::geometry) AS lat,
-                               ST_X(location::geometry) AS lng,
-                               ROUND(
-                                   ST_Distance(
-                                       location,
-                                       ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
-                                   )::numeric, 1
-                               ) AS distance_meters
-                        FROM riders
-                        WHERE ST_DWithin(
-                            location,
-                            ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography,
-                            :radius
-                        )
-                        ORDER BY location <-> ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)::geography
-                        LIMIT :limit
-                    """),
-                    {"lat": lat, "lng": lng, "radius": radius_meters, "limit": limit},
-                ).mappings().all()
-            except Exception:
-                db.rollback()
-                rows = []
 
-        if rows:
-            items = [
-                NearestItem(
-                    id=str(r.get("id") or idx),
-                    name=str(r.get("name") or r.get("rider_name") or f"Rider {idx}"),
-                    category_or_status=str(r.get("status") or ("AVAILABLE" if r.get("is_available", True) else "BUSY")),
-                    phone=r.get("phone") or r.get("phone_number"),
-                    lat=float(r["lat"]),
-                    lng=float(r["lng"]),
-                    distance_meters=float(r["distance_meters"]),
-                )
-                for idx, r in enumerate(rows, start=1)
-            ]
-            return NearestSearchResponse(
-                source="postgis_gist_knn",
-                search_center={"lat": lat, "lng": lng},
-                radius_meters=radius_meters,
-                count=len(items),
-                results=items,
-            )
-
-    # Offline Abuja Rider Fallback
     fallback_riders = [
         NearestItem(
-            id="rdr-abuja-01",
-            name="Musa Abdullahi (Wuse II Dispatch)",
+            id="rdr-ng-01",
+            name="Musa Abdullahi (Express Dispatch)",
             category_or_status="AVAILABLE",
             phone="+2348031112233",
-            lat=9.0770,
-            lng=7.4895,
-            distance_meters=64.5,
+            lat=round(lat + 0.0021, 6),
+            lng=round(lng - 0.0018, 6),
+            distance_meters=295.0,
         ),
         NearestItem(
-            id="rdr-abuja-02",
-            name="Chinedu Okafor (Garki Express)",
+            id="rdr-ng-02",
+            name="Chinedu Okafor (Metro Courier)",
             category_or_status="AVAILABLE",
             phone="+2348054445566",
-            lat=9.0390,
-            lng=7.5015,
-            distance_meters=1420.0,
+            lat=round(lat - 0.0035, 6),
+            lng=round(lng + 0.0029, 6),
+            distance_meters=485.0,
         ),
     ]
     return NearestSearchResponse(
@@ -577,16 +468,13 @@ def find_nearest_riders(
 @app.get("/emergency/nearest", response_model=NearestSearchResponse, tags=["Emergency Response"])
 @app.get("/v1/emergency/nearest", response_model=NearestSearchResponse, tags=["Emergency Response"])
 def find_nearest_emergency(
-    lat: float = Query(..., examples=[9.0765], description="Caller latitude"),
-    lng: float = Query(..., examples=[7.4892], description="Caller longitude"),
-    type: str = Query(default="HOSPITAL", examples=["HOSPITAL", "POLICE", "FIRE"], description="Emergency facility type"),
-    radius_meters: float = Query(default=10000.0, examples=[10000.0], description="Search radius in meters"),
+    lat: float = Query(..., description="Caller latitude"),
+    lng: float = Query(..., description="Caller longitude"),
+    type: str = Query(default="HOSPITAL", description="Emergency facility type"),
+    radius_meters: float = Query(default=10000.0, description="Search radius in meters"),
     limit: int = Query(default=5, ge=1, le=20),
     db: Optional[Session] = Depends(get_db),
 ):
-    """
-    Uses PostGIS ST_DWithin and the GiST KNN distance operator (<->) to locate the nearest emergency responder.
-    """
     facility_type = type.strip().upper()
     if db is not None:
         for table_name in ("emergency_services", "emergency_facilities", "emergencies"):
@@ -619,9 +507,9 @@ def find_nearest_emergency(
                         items = [
                             NearestItem(
                                 id=str(r.get("id") or idx),
-                                name=str(r.get("name") or r.get("facility_name") or f"{facility_type} {idx}"),
+                                name=str(r.get("name") or f"{facility_type} {idx}"),
                                 category_or_status=str(r.get(type_col) or facility_type),
-                                phone=r.get("phone") or r.get("emergency_phone") or r.get("contact_phone"),
+                                phone=r.get("phone"),
                                 lat=float(r["lat"]),
                                 lng=float(r["lng"]),
                                 distance_meters=float(r["distance_meters"]),
@@ -638,25 +526,15 @@ def find_nearest_emergency(
                 except Exception:
                     db.rollback()
 
-    # Offline Abuja Emergency Fallback
     fallback_emergency = [
         NearestItem(
-            id="emg-abuja-01",
-            name="Nisa Premier Hospital (Jabi / Wuse Axis)",
+            id="emg-ng-01",
+            name=f"Central {facility_type.title()} Response Unit",
             category_or_status=facility_type,
             phone="112",
-            lat=9.0667,
-            lng=7.4310,
-            distance_meters=1150.0,
-        ),
-        NearestItem(
-            id="emg-abuja-02",
-            name="National Hospital Abuja (Central District)",
-            category_or_status=facility_type,
-            phone="112",
-            lat=9.0398,
-            lng=7.4631,
-            distance_meters=2890.0,
+            lat=round(lat - 0.0028, 6),
+            lng=round(lng - 0.0024, 6),
+            distance_meters=390.0,
         ),
     ]
     return NearestSearchResponse(
@@ -671,9 +549,6 @@ def find_nearest_emergency(
 @app.get("/orders", response_model=List[OrderResponse], tags=["Orders & Dispatch"])
 @app.get("/v1/orders", response_model=List[OrderResponse], tags=["Orders & Dispatch"])
 async def list_orders(limit: int = Query(default=50, ge=1, le=200), db: Optional[Session] = Depends(get_db)):
-    """
-    Returns the live order list for Teammate A (Admin Dashboard) and Teammate B (Rider App).
-    """
     results: List[OrderResponse] = []
     if db is not None:
         try:
@@ -715,3 +590,26 @@ async def list_orders(limit: int = Query(default=50, ge=1, le=200), db: Optional
         except Exception:
             db.rollback()
     return list(_IN_MEMORY_ORDERS.values())
+
+
+@app.patch("/orders/{order_id}", tags=["Orders & Dispatch"])
+@app.patch("/v1/orders/{order_id}", tags=["Orders & Dispatch"])
+def update_order_status(
+    order_id: str,
+    status: str = Query(default="DISPATCHED", description="PENDING, DISPATCHED, or DELIVERED"),
+    db: Optional[Session] = Depends(get_db),
+):
+    clean_status = status.strip().upper()
+    if db is not None:
+        try:
+            db.execute(
+                text("UPDATE orders SET status = :st WHERE id::text = :oid OR idempotency_key = :oid"),
+                {"st": clean_status, "oid": order_id},
+            )
+            db.commit()
+        except Exception:
+            db.rollback()
+    for k, v in _IN_MEMORY_ORDERS.items():
+        if v.order_id == order_id or k == order_id:
+            v.order_status = clean_status
+    return {"status": "success", "order_id": order_id, "order_status": clean_status}
