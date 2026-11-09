@@ -1,4 +1,4 @@
-﻿// src/components/admin/AdminDashboard.tsx
+// src/components/admin/AdminDashboard.tsx
 import React, { useEffect, useMemo, useState } from "react";
 import {
   RefreshCw,
@@ -152,15 +152,15 @@ export const AdminDashboard: React.FC = () => {
     <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
       {/* Left Column: Live PostGIS Orders Table (7 cols) */}
       <div className="space-y-4 lg:col-span-7">
-        <div className="overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-900/30">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 px-5 py-4">
+        <div className="overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/30">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-200 dark:border-zinc-800 px-5 py-4">
             <div>
               <span className="font-mono text-[10px] uppercase tracking-widest text-cyan-400">
-                TASK #7 • FLOW B: DISPATCH &amp; ORDER LEDGER
+                SPATIAL DISPATCH &amp; ORDER LEDGER
               </span>
-              <h2 className="mt-0.5 text-base font-semibold text-white">
-                Live Abuja Spatial Orders ({filteredOrders.length} of{" "}
-                {orders.length})
+              <h2 className="mt-0.5 text-base font-semibold text-slate-900 dark:text-white">
+                Live Orders ({filteredOrders.length} of {orders.length})
+
               </h2>
             </div>
 
@@ -168,7 +168,7 @@ export const AdminDashboard: React.FC = () => {
               type="button"
               onClick={fetchOrders}
               disabled={loadingOrders}
-              className="flex items-center gap-1.5 rounded-xl border border-zinc-700 bg-zinc-800 px-3 py-1.5 font-mono text-xs text-zinc-200 transition-all hover:bg-zinc-700"
+              className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-100 dark:bg-zinc-800 px-3 py-1.5 font-mono text-xs text-slate-700 dark:text-zinc-200 transition-all hover:bg-zinc-700"
             >
               <RefreshCw
                 className={`h-3.5 w-3.5 ${loadingOrders ? "animate-spin" : ""}`}
@@ -178,7 +178,7 @@ export const AdminDashboard: React.FC = () => {
           </div>
 
           {/* Status Filter Pills (ALL | PENDING | DISPATCHED | DELIVERED) & Search Input */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-800 bg-[#0A0A0C] px-5 py-3">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 dark:border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-[#0A0A0C] px-5 py-3">
             <div className="flex flex-wrap items-center gap-1.5">
               {(
                 [
@@ -202,7 +202,7 @@ export const AdminDashboard: React.FC = () => {
                           : st === "DISPATCHED"
                             ? "border-cyan-500/50 bg-cyan-500/20 text-cyan-300"
                             : "border-emerald-500/50 bg-emerald-500/20 text-emerald-300"
-                        : "border-zinc-800 bg-zinc-900/80 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
+                        : "border-slate-200 dark:border-zinc-800 bg-zinc-900/80 text-zinc-400 hover:border-zinc-700 hover:text-zinc-200"
                     }`}
                   >
                     <span>{st}</span>
@@ -221,7 +221,7 @@ export const AdminDashboard: React.FC = () => {
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Filter postcode, customer, key..."
-                className="h-8 w-full rounded-lg border border-zinc-800 bg-[#08080A] pl-8 pr-3 font-mono text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
+                className="h-8 w-full rounded-lg border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-[#08080A] pl-8 pr-3 font-mono text-xs text-white placeholder-zinc-500 focus:border-emerald-500 focus:outline-none"
               />
             </div>
           </div>
@@ -246,7 +246,7 @@ export const AdminDashboard: React.FC = () => {
             <div className="max-h-[640px] overflow-x-auto overflow-y-auto">
               <table className="w-full border-collapse text-left">
                 <thead>
-                  <tr className="border-b border-zinc-800 bg-[#0A0A0C] font-mono text-[10px] uppercase tracking-wider text-zinc-500">
+                  <tr className="border-b border-slate-200 dark:border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-[#0A0A0C] font-mono text-[10px] uppercase tracking-wider text-zinc-500">
                     <th className="px-4 py-3">Postcode / Address</th>
                     <th className="px-4 py-3">Customer</th>
                     <th className="px-4 py-3">Idempotency Key</th>
@@ -319,9 +319,9 @@ export const AdminDashboard: React.FC = () => {
         />
 
         {/* Selected Order Status Switcher & Nearest Riders Card */}
-        <div className="space-y-3 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
+        <div className="space-y-3 rounded-2xl border border-slate-200 dark:border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 p-4">
           {selectedOrder && (
-            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800 pb-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-200 dark:border-zinc-800 pb-3">
               <div>
                 <span className="font-mono text-[10px] text-zinc-400">
                   ACTIVE ORDER STATUS ({selectedOrder.postcode})
@@ -344,7 +344,7 @@ export const AdminDashboard: React.FC = () => {
                     className={`rounded border px-2 py-0.5 font-mono text-[10px] font-semibold transition ${
                       selectedOrder.order_status.toUpperCase() === st
                         ? "border-emerald-400 bg-emerald-500 text-black"
-                        : "border-zinc-800 bg-[#08080A] text-zinc-400 hover:text-white"
+                        : "border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-[#08080A] text-zinc-400 hover:text-white"
                     }`}
                   >
                     {st}
@@ -373,7 +373,7 @@ export const AdminDashboard: React.FC = () => {
                 className={`flex items-center justify-between gap-3 rounded-xl border p-3 ${
                   idx === 0
                     ? "border-cyan-500/40 bg-cyan-500/10"
-                    : "border-zinc-800 bg-[#08080A]"
+                    : "border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-[#08080A]"
                 }`}
               >
                 <div>
@@ -423,12 +423,12 @@ export const AdminDashboard: React.FC = () => {
         </div>
 
         {/* Nearest Emergency Responder Card (GET /emergency/nearest) */}
-        <div className="space-y-3 rounded-2xl border border-zinc-800 bg-zinc-900/40 p-4">
+        <div className="space-y-3 rounded-2xl border border-slate-200 dark:border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-900/40 p-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <Siren className="h-4 w-4 text-amber-400" />
               <h3 className="text-xs font-semibold uppercase tracking-wider text-zinc-300">
-                Flow C: Emergency KNN Triage
+                Emergency Services
               </h3>
             </div>
 
@@ -444,7 +444,7 @@ export const AdminDashboard: React.FC = () => {
                   className={`rounded border px-2 py-0.5 font-mono text-[10px] transition-all ${
                     emergencyType === type
                       ? "border-amber-400 bg-amber-400 font-bold text-black"
-                      : "border-zinc-800 bg-zinc-900 text-zinc-400"
+                      : "border-slate-200 dark:border-zinc-800 bg-zinc-900 text-zinc-400"
                   }`}
                 >
                   {type}
@@ -457,7 +457,7 @@ export const AdminDashboard: React.FC = () => {
             {emergencies.map((emg) => (
               <div
                 key={emg.id}
-                className="flex items-center justify-between rounded-xl border border-zinc-800 bg-[#08080A] p-2.5 text-xs"
+                className="flex items-center justify-between rounded-xl border border-slate-200 dark:border-zinc-800 bg-slate-50 dark:bg-[#08080A] p-2.5 text-xs"
               >
                 <div>
                   <span className="font-medium text-zinc-200">{emg.name}</span>

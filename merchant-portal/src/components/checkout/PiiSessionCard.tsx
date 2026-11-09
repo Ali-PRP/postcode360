@@ -1,4 +1,4 @@
-﻿// src/components/checkout/PiiSessionCard.tsx
+// src/components/checkout/PiiSessionCard.tsx
 import React, { useEffect, useState } from "react";
 import {
   ShieldCheck,
@@ -22,7 +22,7 @@ export const PiiSessionCard: React.FC<PiiSessionCardProps> = ({
 }) => {
   const [mode, setMode] = useState<"nin" | "email">("nin");
   const [nin, setNin] = useState("12345678901");
-  const [email, setEmail] = useState("user@findam.ng");
+  const [email, setEmail] = useState("customer@postcode360.ng");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,14 +57,14 @@ export const PiiSessionCard: React.FC<PiiSessionCardProps> = ({
   };
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[#111116] p-5 space-y-4 shadow-xl">
+    <section className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c1017] p-5 space-y-4 shadow-xl">
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5">
           <span className="flex h-6 w-6 items-center justify-center rounded-full border border-violet-500/40 bg-violet-500/20 font-mono text-xs font-bold text-violet-300">
             1
           </span>
           <div>
-            <h2 className="text-sm font-semibold text-white">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
               Zero-PII Widget Session Handshake
             </h2>
             <p className="font-mono text-[11px] text-zinc-400">
@@ -78,7 +78,7 @@ export const PiiSessionCard: React.FC<PiiSessionCardProps> = ({
       </div>
 
       {/* Mode Switcher: NIN vs Email */}
-      <div className="grid grid-cols-2 gap-2 rounded-xl border border-white/10 bg-[#08080A] p-1">
+      <div className="grid grid-cols-2 gap-2 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111625] p-1">
         <button
           type="button"
           onClick={() => setMode("nin")}
@@ -106,7 +106,7 @@ export const PiiSessionCard: React.FC<PiiSessionCardProps> = ({
       </div>
 
       <form onSubmit={handleHandshake} className="space-y-2.5">
-        <label className="block text-xs font-medium text-zinc-300">
+        <label className="block text-xs font-medium text-slate-700 dark:text-zinc-300">
           {mode === "nin"
             ? "Enter 11-Digit NIMC National Identification Number (NIN)"
             : "Enter Shopper Email Address"}
@@ -119,7 +119,7 @@ export const PiiSessionCard: React.FC<PiiSessionCardProps> = ({
               value={nin}
               onChange={(e) => setNin(e.target.value.replace(/\D/g, ""))}
               placeholder="12345678901"
-              className="flex-1 rounded-xl border border-white/15 bg-[#08080A] px-3.5 py-2.5 font-mono text-sm text-white focus:border-violet-400 focus:outline-none"
+              className="flex-1 rounded-xl border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-[#111625] px-3.5 py-2.5 font-mono text-sm text-slate-900 dark:text-white focus:border-violet-400 focus:outline-none"
               required
             />
           ) : (
@@ -127,8 +127,8 @@ export const PiiSessionCard: React.FC<PiiSessionCardProps> = ({
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="user@findam.ng"
-              className="flex-1 rounded-xl border border-white/15 bg-[#08080A] px-3.5 py-2.5 font-mono text-sm text-white focus:border-violet-400 focus:outline-none"
+              placeholder="customer@postcode360.ng"
+              className="flex-1 rounded-xl border border-slate-200 dark:border-white/15 bg-slate-50 dark:bg-[#111625] px-3.5 py-2.5 font-mono text-sm text-slate-900 dark:text-white focus:border-violet-400 focus:outline-none"
               required
             />
           )}
@@ -144,7 +144,7 @@ export const PiiSessionCard: React.FC<PiiSessionCardProps> = ({
         </div>
 
         <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-zinc-500">
-          <span className="rounded border border-white/10 bg-[#08080A] px-2 py-0.5 text-zinc-400">
+          <span className="rounded border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111625] px-2 py-0.5 text-zinc-400">
             {DEFAULT_PUBLISHABLE_KEY}
           </span>
           <span className="flex items-center gap-1">
@@ -161,7 +161,7 @@ export const PiiSessionCard: React.FC<PiiSessionCardProps> = ({
         )}
       </form>
 
-      {/* Judge Verification Telemetry Badge */}
+      {/* Security Verification Telemetry Badge */}
       {session && (
         <div className="space-y-2 rounded-xl border border-emerald-500/30 bg-[#08080A] p-3.5">
           <div className="flex items-center justify-between text-xs">

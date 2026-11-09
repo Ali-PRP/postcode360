@@ -1,4 +1,4 @@
-﻿// src/components/checkout/OrderCheckout.tsx
+// src/components/checkout/OrderCheckout.tsx
 import React, { useState } from "react";
 import { ShoppingBag, Repeat, CheckCircle2, ShieldAlert } from "lucide-react";
 import { postcode360Api } from "../../services/api";
@@ -20,7 +20,7 @@ export const OrderCheckout: React.FC<OrderCheckoutProps> = ({
   const [customerName, setCustomerName] = useState("Hajiya Amina");
   const [customerPhone, setCustomerPhone] = useState("+2348030001122");
   const [notes, setNotes] = useState("Blue gate, opposite Access Bank");
-  const [amountNgn] = useState(28500);
+  const [amountNgn] = useState(180000);
   const [idempotencyKey, setIdempotencyKey] = useState("ord-wuse2-2026-001");
 
   const [loading, setLoading] = useState(false);
@@ -65,17 +65,17 @@ export const OrderCheckout: React.FC<OrderCheckoutProps> = ({
   };
 
   return (
-    <section className="rounded-2xl border border-white/10 bg-[#111116] p-5 space-y-4 shadow-xl">
+    <section className="rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c1017] p-5 space-y-4 shadow-xl">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <span className="flex h-6 w-6 items-center justify-center rounded-full border border-cyan-500/40 bg-cyan-500/20 font-mono text-xs font-bold text-cyan-300">
             3
           </span>
           <div>
-            <h2 className="text-sm font-semibold text-white">
+            <h2 className="text-sm font-semibold text-slate-900 dark:text-white">
               Idempotent Order &amp; Dispatch Execution
             </h2>
-            <p className="font-mono text-[11px] text-zinc-400">
+            <p className="font-mono text-[11px] text-slate-500 dark:text-zinc-400">
               POST /orders • Strict Idempotency Key Protection
             </p>
           </div>
@@ -84,44 +84,44 @@ export const OrderCheckout: React.FC<OrderCheckoutProps> = ({
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-[11px] text-zinc-400">
+          <label className="mb-1 block text-[11px] text-slate-500 dark:text-zinc-400">
             Customer Name
           </label>
           <input
             type="text"
             value={customerName}
             onChange={(e) => setCustomerName(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-[#08080A] px-3 py-2 text-xs text-white focus:border-emerald-400 focus:outline-none"
+            className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111625] px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-emerald-400 focus:outline-none"
           />
         </div>
         <div>
-          <label className="mb-1 block text-[11px] text-zinc-400">
+          <label className="mb-1 block text-[11px] text-slate-500 dark:text-zinc-400">
             Customer Phone (NG)
           </label>
           <input
             type="text"
             value={customerPhone}
             onChange={(e) => setCustomerPhone(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-[#08080A] px-3 py-2 font-mono text-xs text-white focus:border-emerald-400 focus:outline-none"
+            className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111625] px-3 py-2 font-mono text-xs text-slate-900 dark:text-white focus:border-emerald-400 focus:outline-none"
           />
         </div>
       </div>
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-[11px] text-zinc-400">
+          <label className="mb-1 block text-[11px] text-slate-500 dark:text-zinc-400">
             Delivery Gate / Landmark Notes
           </label>
           <input
             type="text"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            className="w-full rounded-lg border border-white/10 bg-[#08080A] px-3 py-2 text-xs text-white focus:border-emerald-400 focus:outline-none"
+            className="w-full rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111625] px-3 py-2 text-xs text-slate-900 dark:text-white focus:border-emerald-400 focus:outline-none"
           />
         </div>
         <div>
           <div className="mb-1 flex items-center justify-between">
-            <label className="font-mono text-[11px] text-zinc-400">
+            <label className="font-mono text-[11px] text-slate-500 dark:text-zinc-400">
               idempotency_key
             </label>
             <button
@@ -169,7 +169,7 @@ export const OrderCheckout: React.FC<OrderCheckoutProps> = ({
         >
           <Repeat className="h-3.5 w-3.5" />
           <span>
-            Simulate Network Retry / Double-Tap Pay (Re-send `{idempotencyKey}`)
+            Network Retry / Double-Tap Pay (Re-send `{idempotencyKey}`)
           </span>
         </button>
       </div>
@@ -208,7 +208,7 @@ export const OrderCheckout: React.FC<OrderCheckoutProps> = ({
           <p className="text-[11px] opacity-90">
             {orderResult.idempotent_replay
               ? `Re-transmitted key "${orderResult.idempotency_key}" matched existing order ${orderResult.order_id}. Duplicate payment prevented!`
-              : `Order ${orderResult.order_id} committed for ${orderResult.postcode} (${orderResult.delivery_address}). Switch to Back-Office Admin to inspect or dispatch.`}
+              : `Order ${orderResult.order_id} committed for ${orderResult.postcode} (${orderResult.delivery_address}). Switch to Admin to inspect or dispatch.`}
           </p>
         </div>
       )}

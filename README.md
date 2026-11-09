@@ -1,100 +1,213 @@
 # Postcode360 📍
 
-**3-Tier Nigerian Spatial Postcode Resolution, Zero-PII Checkout & PostGIS Last-Mile Dispatch Platform**
+**Spatial Postcode Resolution & Dispatch Platform — Making addressing plug-and-play for Nigerian e-commerce, logistics, and emergency services.**
 
-[![Stack](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Database](https://img.shields.io/badge/Supabase-PostGIS%20EPSG%3A4326-3ECF8E?logo=postgresql&logoColor=white)](https://postgis.net/)
-[![Frontend](https://img.shields.io/badge/React%2019-Vite%20%2B%20TypeScript-61DAFB?logo=react&logoColor=black)](https://vite.dev/)
-[![Maps](https://img.shields.io/badge/MapLibre%20GL-Esri%20Satellite%20%2B%20SVG%20CAD-396CB2)](https://maplibre.org/)
-[![Security](https://img.shields.io/badge/Privacy-Zero--PII%20HMAC--SHA256-8B5CF6)](#zero-pii-security-architecture)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.115+-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![PostGIS](https://img.shields.io/badge/Supabase-PostGIS%20EPSG%3A4326-3ECF8E?logo=postgresql&logoColor=white)](https://postgis.net/)
+[![React](https://img.shields.io/badge/React%2019-Vite%20%2B%20TypeScript-61DAFB?logo=react&logoColor=black)](https://vite.dev/)
+[![MapLibre](https://img.shields.io/badge/MapLibre%20GL-Esri%20Satellite%20%2B%20SVG-396CB2)](https://maplibre.org/)
 
-> **Lead Engineering (Team A — Merchant Checkout, Spatial Map Engine, Back-Office Admin & Plugins):** Aliyu ([@Ali-PRP](https://github.com/Ali-PRP))
-> **Active Branch:** `fea/merchant` → `dev`
+> Built by [NovaSync Solutions](https://github.com/Ali-PRP) — **Aliyu** ([@Ali-PRP](https://github.com/Ali-PRP))
 
 ---
 
-## 1. Executive Overview
+## What is Postcode360?
 
-**Postcode360** solves Nigeria's last-mile addressing, e-commerce checkout, and emergency dispatch challenge by replacing ambiguous street descriptions with a verifiable **3-Tier Spatial Postcode** (`State - Sector - Building Unit`, e.g., `FC-02-A09-DB-09`).
+**Paystack made payments plug-and-play. Postcode360 makes spatial addressing plug-and-play.**
 
-Built for the **Abuja FCT Spatial Pilot** with state-aware expansion across Nigeria (`LA` Lagos, `KN` Kano, `RV` Rivers, `OY` Oyo, `KD` Kaduna, `EN` Enugu, `ED` Edo, `AN` Anambra, `OG` Ogun, `DT` Delta, `PL` Plateau), the platform combines a **FastAPI + Supabase PostGIS** spatial backend with a **React + MapLibre GL** merchant and dispatch workspace.
+Postcode360 replaces ambiguous street descriptions with a verifiable **5-segment spatial postcode** (`FC-02-A09-DB-09`) that resolves to an exact rooftop building polygon, coordinates, and street address — instantly usable at checkout.
 
----
+### Who it's for
 
-## 2. Core System Architecture
-
-### A. Step 01 — Zero-PII Widget Session Handshake (`POST /v1/widget/session`)
-
-- **Server-Side HMAC-SHA256 Hashing**: Shoppers verify using an **11-digit Nigerian NIN** or **Email Address**. Raw PII is immediately hashed using a salted HMAC-SHA256 digest (`sha256:...`) and never stored in plaintext (`raw_pii_retained: false`).
-- **Origin-Bound Publishable Keys**: Validates merchant publishable keys (`pk_test_findam_abuja_01`) against authorized request `Origin` headers before issuing short-lived HS256 session JWTs.
-
-### B. Step 02 — 3-Tier Spatial Postcode Resolution (`POST /v1/lookup` & `GET /v1/mock/postcodes`)
-
-- **3-Tier Code Dissection**:
-  - **Tier 1 (State)**: `FC (FCT Abuja)`, `LA (Lagos State)`, `KN (Kano State)`, etc.
-  - **Tier 2 (Sector / District)**: Cadastral zone or district (`02-A09 Wuse II Commercial Core`, `Garki Area 11`, `Maitama Diplomatic Zone`, `Central Business District`, `Jabi Lakefront`).
-  - **Tier 3 (Building Footprint)**: Exact parcel code (`DB-09`) mapped to an `EPSG:4326` rooftop building polygon (`building_polygon`), Google Plus Code (`6FX93FGP+JM`), and legacy NIPOST code (`900288`).
-- **3-Tier Resolution Waterfall**:
-  1. **Tier 1 Cache / Mock Sandbox**: Instant sub-10ms resolution for pre-seeded pilot bookmarks.
-  2. **Tier 2 PostGIS Spatial DB**: Queries canonical `postcodes` and 90-day TTL `aliases` (`TP-XXXX-XXXX`) tables indexed with PostGIS `GIST`.
-  3. **Tier 3 NIPOST Upstream & State-Aware Grid Synthesizer**: Resolves upstream NIPOST records or synthesizes state-accurate parcel polygons and coordinates across 12+ Nigerian state prefixes so far.
-
-### C. Step 03 — Idempotent Merchant Checkout (`POST /orders`)
-
-- **Zero Double-Charge Guarantee**: Every checkout request carries a unique `idempotency_key` (e.g., `ord-wuse2-2026-001`).
-- **Network Retry Simulator**: Built-in UI control simulates unstable mobile network double-taps; re-submitting an existing `idempotency_key` is intercepted by the PostGIS unique constraint and in-memory ledger, returning the existing order with `idempotent_replay: true` and `₦0` additional charge.
-
-### D. Satellite + Camera-Locked SVG Vector Map Engine (`PostcodeMap.tsx`)
-
-- **Esri World Imagery Satellite & OSM Streets Switcher**: Defaults to high-resolution Esri satellite imagery with a 1-click toggle to OpenStreetMap street tiles.
-- **Dynamic Architectural Building Polygons (`V1..Vn`)**: Renders distinct multi-vertex building footprints (`6-vertex L-plaza` in Wuse II, `8-vertex cruciform tower` in CBD, `6-vertex hexagonal villa` in Maitama, `8-vertex U-courtyard` in Garki, `5-vertex terrace` in Jabi) with hoverable corner nodes displaying exact `[lng, lat]` coordinates.
-- **Live Dispatch & Rescue Trajectory Vectors**: Draws a glowing dashed cyan vector line (with distance midpoint pill and `Fit Rider Route` / `Focus Rooftop` camera framing) connecting the closest rider to the target building centroid, alongside a dashed rose vector to the nearest emergency facility.
-
-### E. Task #7 — Back-Office Admin & PostGIS KNN Dispatch Ledger (`AdminDashboard.tsx`)
-
-- **Live Order Queue & Status Filters**: Filter live PostGIS orders by `ALL`, `PENDING`, `DISPATCHED`, and `DELIVERED`, or search by Order ID, Postcode, Customer Name, Street, or Idempotency Key.
-- **PostGIS GiST KNN Nearest Rider Dispatch (`GET /riders/nearest`)**: Uses `ST_DWithin` and the PostGIS `<->` KNN distance operator to rank available dispatch riders by exact meter distance and ETA, supporting 1-click rider assignment (`PATCH /orders/{order_id}`).
-- **Flow C Emergency Triage (`GET /emergency/nearest`)**: Instant spatial lookup for the closest `HOSPITAL`, `POLICE`, or `FIRE` response unit around any selected order or postcode.
-
-### F. Task #5 & #6 — Drop-in WooCommerce & Shopify Integrations (`plugins/` & `extensions/`)
-
-- **WooCommerce PHP Plugin (`postcode360-checkout.php`)**: Injects the 3-tier postcode field into WooCommerce billing checkout, enqueues the origin-bound widget SDK, and syncs processed orders to `POST /orders` with deterministic idempotency keys (`woo-ord-{id}`).
-- **Shopify Theme App Extension (`postcode-widget.liquid`)**: Embeddable Liquid block that resolves postcodes during cart/checkout and attaches `postcode360_code`, `postcode360_lat`, and `postcode360_lng` to Shopify cart attributes. Includes an interactive **Shopify Theme Editor Simulator** in the frontend workspace.
+| Audience | Solution |
+|---|---|
+| **E-Commerce Websites** | Embeddable Checkout Widget (`@postcode360/checkout-js`) and drop-in WooCommerce/Shopify plugins. At checkout, a buyer enters their email → bookmarked postcodes appear → buyer selects one → merchant gets verified address + coordinates + rooftop polygon. |
+| **Social Media Vendors** | No-code storefront with a shareable bio link (`postcode360.ng/store/{vendor}`) and direct product payment links (`postcode360.ng/pay/{product}`). Buyers select products, checkout resolves their delivery postcode. |
+| **Logistics / 3PL Companies** | Enumerator SDK (`@postcode360/enumerator-sdk`) for rider apps. Couriers view rooftop polygons and act as crowdsourced enumerators — minting Temporary Postcodes (`TP-...`) that auto-promote after 3 verified deliveries. |
 
 ---
 
-## 3. Repository Structure
+## Repository Structure
 
-```text
-postcode360/
-├── backend/
-│   ├── main.py                  # FastAPI application, CORS, 3-tier lookup, orders & KNN routes
-│   ├── database.py              # SQLAlchemy 2.0 + Psycopg 3 engine & session pool for Supabase PostGIS
-│   ├── schemas.py               # Pydantic v2 request/response contracts
-│   ├── security.py              # HMAC-SHA256 PII hashing, origin-bound key registry & HS256 JWTs
-│   └── mock_postcodes.json      # Canonical Abuja pilot postcodes & multi-vertex building polygons
-├── database/
-│   └── schema.sql               # PostGIS extension, tables (postcodes, aliases, orders, rider_loc, emergency_facilities) & GiST indexes
-├── plugins/
-│   └── woocommerce-postcode360/
-│       └── postcode360-checkout.php   # Task #5: WordPress / WooCommerce checkout plugin
-├── extensions/
-│   └── postcode360-checkout/
-│       └── blocks/
-│           └── postcode-widget.liquid # Task #6: Shopify Theme App Extension Liquid block
-├── merchant-portal/             # React 19 + TypeScript + Vite + Tailwind CSS + MapLibre GL frontend
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── layout/Navbar.tsx          # Header, live health badges & collapsible API Telemetry Logs drawer
-│   │   │   ├── checkout/PiiSessionCard.tsx # Step 01: NIN/Email HMAC-SHA256 handshake card
-│   │   │   ├── checkout/PostcodeLookup.tsx # Step 02: 3-Tier postcode lookup & dissection card
-│   │   │   ├── checkout/OrderCheckout.tsx  # Step 03: Idempotent checkout & retry simulator
-│   │   │   ├── map/PostcodeMap.tsx         # Esri Satellite + OSM + SVG Vector footprint & trajectory map
-│   │   │   ├── admin/AdminDashboard.tsx    # Task #7: Back-office order queue, status filters & KNN dispatch
-│   │   │   └── plugins/PluginTemplates.tsx # Task #5/#6: Plugin code inspector & Shopify Theme simulator
-│   │   ├── services/api.ts      # Hybrid FastAPI client with automatic offline sandbox fallback & telemetry
-│   │   ├── types/postcode360.ts # Shared TypeScript interfaces aligned with backend/schemas.py
-│   │   └── App.tsx              # Unified workspace controller
-│   └── package.json
-└── requirements.txt             # Python backend dependencies
 ```
+postcode360/
+├── backend/                           # FastAPI + Supabase PostGIS backend
+│   ├── main.py                        # Application entry, CORS, lookup, orders & KNN routes
+│   ├── database.py                    # SQLAlchemy 2.0 + Psycopg 3 engine & session pool
+│   ├── schemas.py                     # Pydantic v2 request/response contracts
+│   ├── security.py                    # HMAC-SHA256 PII hashing, origin-bound keys & HS256 JWTs
+│   ├── rider.py                       # Rider telemetry & dispatch endpoints
+│   └── mock_postcodes.json            # Canonical Abuja pilot postcodes & building polygons
+│
+├── database/
+│   └── schema.sql                     # PostGIS extension, tables & GiST spatial indexes
+│
+├── merchant-portal/                   # React 19 + TypeScript + Vite + Tailwind CSS
+│   ├── src/
+│   │   ├── App.tsx                    # Main workspace controller (5 tabs + dark mode)
+│   │   ├── components/
+│   │   │   ├── layout/Navbar.tsx      # Top navigation bar & branding
+│   │   │   ├── checkout/             
+│   │   │   │   ├── CustomerCheckoutWidget.tsx  # Customer-facing checkout experience
+│   │   │   │   ├── PiiSessionCard.tsx          # Zero-PII email/NIN HMAC-SHA256 session
+│   │   │   │   ├── PostcodeLookup.tsx          # 5-segment postcode resolution
+│   │   │   │   ├── OrderCheckout.tsx           # Idempotent order creation & retry handling
+│   │   │   │   └── BookmarkSyncBar.tsx         # Email-linked postcode bookmarks
+│   │   │   ├── storefront/
+│   │   │   │   └── SocialStorefront.tsx        # No-code vendor catalog & payment links
+│   │   │   ├── admin/
+│   │   │   │   └── AdminDashboard.tsx          # Live order queue, filters & KNN dispatch
+│   │   │   ├── rider/
+│   │   │   │   └── RiderDashboard.tsx          # Dispatch Hub: courier console, POD & TP minting
+│   │   │   ├── map/
+│   │   │   │   └── PostcodeMap.tsx             # Satellite/street map with building polygons
+│   │   │   └── plugins/
+│   │   │       └── PluginTemplates.tsx         # WooCommerce & Shopify plugin inspector
+│   │   ├── services/
+│   │   │   └── api.ts                 # Hybrid API client with offline fallback & telemetry
+│   │   └── types/
+│   │       └── postcode360.ts         # Shared TypeScript interfaces
+│   ├── plugins/
+│   │   ├── woocommerce-postcode360/
+│   │   │   └── postcode360-checkout.php        # WooCommerce checkout plugin
+│   │   └── shopify-postcode360-embed/
+│   │       └── extensions/.../postcode-widget.liquid  # Shopify Theme Extension
+│   ├── package.json
+│   ├── tailwind.config.js
+│   ├── tsconfig.json
+│   └── vite.config.ts
+│
+├── openapi.json                       # OpenAPI 3.1 contract
+├── requirements.txt                   # Python backend dependencies
+├── .env.example                       # Environment variable template
+└── .gitignore
+```
+
+---
+
+## Core Architecture
+
+### 1. Zero-PII Widget Session (`POST /v1/widget/session`)
+
+Shoppers authenticate with an email or NIN. Raw PII is immediately hashed using salted HMAC-SHA256 (`sha256:...`) — never stored in plaintext. Origin-bound publishable keys (`pk_test_postcode360_abuja_01`) validate merchant requests before issuing short-lived HS256 session JWTs.
+
+### 2. 5-Segment Postcode Resolution (`POST /v1/lookup`)
+
+Codes follow the format `State-Sector-District-Unit` (e.g., `FC-02-A09-DB-09`):
+
+- **Tier 1 — State**: `FC` (FCT Abuja), `LA` (Lagos), `KN` (Kano), etc.
+- **Tier 2 — Sector/District**: Cadastral zone (`02-A09 Wuse II Commercial Core`)
+- **Tier 3 — Building Unit**: Exact parcel mapped to an EPSG:4326 rooftop polygon, Plus Code, and NIPOST legacy code
+
+Resolution waterfall: **In-memory cache → PostGIS spatial DB → NIPOST upstream / state grid synthesizer**.
+
+### 3. Idempotent Checkout (`POST /orders`)
+
+Every order carries a unique `idempotency_key`. Re-submitting the same key returns the existing order with `idempotent_replay: true` and zero additional billing — preventing double charges on unstable mobile networks.
+
+### 4. Crowdsourced Address Minting (`POST /v1/alias/mint`)
+
+Delivery riders mint Temporary Postcodes (`TP-ABJ-XXXX`) where no NIPOST postcode exists. Each TP-code carries a 90-day TTL and auto-promotes to a verified alias after 3 confirmed deliveries.
+
+### 5. PostGIS KNN Dispatch (`GET /riders/nearest`, `GET /emergency/nearest`)
+
+Uses `ST_DWithin` and the PostGIS `<->` KNN distance operator to rank available riders and emergency responders by exact meter distance and ETA.
+
+---
+
+## Getting Started
+
+### Prerequisites
+
+- **Python 3.11+** with `pip`
+- **Node.js 18+** with `npm`
+- **Supabase** project (or local PostgreSQL with PostGIS extension)
+
+### Backend Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/Ali-PRP/postcode360.git
+cd postcode360
+
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate      # Linux/macOS
+# venv\Scripts\activate       # Windows
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure environment
+cp .env.example .env
+# Edit .env with your Supabase/PostGIS credentials
+
+# Run the API server
+cd backend
+uvicorn main:app --reload --port 8000
+```
+
+### Frontend Setup
+
+```bash
+cd merchant-portal
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+Open [http://localhost:5173](http://localhost:5173) to access the merchant portal.
+
+### Production Build
+
+```bash
+cd merchant-portal
+npm run build    # Outputs to dist/
+```
+
+---
+
+## Environment Variables
+
+See [`.env.example`](.env.example) for the full list. Key variables:
+
+| Variable | Description |
+|---|---|
+| `DATABASE_URL` | Supabase/PostGIS connection string |
+| `VITE_API_BASE_URL` | Backend API URL (default: `http://localhost:8000`) |
+| `VITE_POSTCODE360_PUBLIC_KEY` | Publishable key for widget sessions |
+
+---
+
+## API Documentation
+
+Interactive API docs available at:
+- **Swagger UI**: `http://localhost:8000/docs`
+- **ReDoc**: `http://localhost:8000/redoc`
+- **OpenAPI Spec**: [`openapi.json`](openapi.json)
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| **Backend** | FastAPI, SQLAlchemy 2.0, Psycopg 3, Pydantic v2 |
+| **Database** | Supabase PostgreSQL + PostGIS (EPSG:4326, GiST indexes) |
+| **Frontend** | React 19, TypeScript, Vite, Tailwind CSS |
+| **Maps** | MapLibre GL JS, Esri World Imagery, OpenStreetMap |
+| **Security** | HMAC-SHA256 PII hashing, HS256 JWTs, origin-bound keys |
+| **Plugins** | WooCommerce (PHP), Shopify Theme App Extension (Liquid) |
+
+---
+
+## License
+
+All rights reserved. © 2026 NovaSync Solutions.
+
+---
+
+**Postcode360** by [NovaSync Solutions](https://github.com/Ali-PRP)

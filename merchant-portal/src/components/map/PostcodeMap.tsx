@@ -1,4 +1,4 @@
-﻿// src/components/map/PostcodeMap.tsx
+// src/components/map/PostcodeMap.tsx
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import * as maplibregl from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
@@ -23,6 +23,7 @@ export interface PostcodeMapProps {
   addressLabel?: string;
   source?: string;
   resolutionSource?: string;
+  resolvedSource?: string;
   latencyMs?: number | null;
   confidence?: number;
   buildingPolygon?: number[][] | null;
@@ -31,6 +32,7 @@ export interface PostcodeMapProps {
   selectedRiderId?: string | null;
   heightClass?: string;
   title?: string;
+  theme?: "light" | "dark";
 }
 
 const ABUJA_DEFAULT = { lat: 9.0765, lng: 7.4892 };
@@ -165,19 +167,20 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
   addressLabel,
   source,
   resolutionSource,
-  latencyMs,
-  confidence,
+  resolvedSource: explicitSource,
   buildingPolygon,
   riders = [],
   emergencies = [],
   selectedRiderId = null,
   heightClass = "h-[440px]",
   title,
+  theme = "dark",
 }) => {
   const resolvedLat = centerLat ?? lat ?? ABUJA_DEFAULT.lat;
   const resolvedLng = centerLng ?? lng ?? ABUJA_DEFAULT.lng;
   const resolvedPostcode = postcodeLabel ?? postcode ?? "FC-02-A09-DB-09";
-  const resolvedSource = resolutionSource ?? source ?? "POSTGIS_GIST_KNN";
+  const resolvedSource = explicitSource ?? resolutionSource ?? source ?? "POSTGIS_GIST_KNN";
+  void resolvedSource;
 
   const mapContainerRef = useRef<HTMLDivElement | null>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
@@ -186,7 +189,7 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
   const [mapStyleType, setMapStyleType] = useState<"satellite" | "streets">(
     "satellite",
   );
-  const [viewMode, setViewMode] = useState<"route" | "rooftop">("route");
+  const [viewMode, setViewMode] = useState<"route" | "rooftop">("rooftop");
   const [cameraTick, setCameraTick] = useState<number>(0);
   const [hoveredVertex, setHoveredVertex] = useState<{
     label: string;
@@ -225,9 +228,10 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
     if (!map) return;
     map.flyTo({
       center: [resolvedLng, resolvedLat],
-      zoom: 17.8,
-      pitch: 35,
-      duration: 900,
+      zoom: 18.2,
+      pitch: 0,
+      bearing: 0,
+      duration: 800,
     });
   }, [resolvedLng, resolvedLat]);
 
@@ -238,9 +242,10 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
     if (!primaryRider) {
       map.flyTo({
         center: [resolvedLng, resolvedLat],
-        zoom: 17.5,
-        pitch: 30,
-        duration: 900,
+        zoom: 18.2,
+        pitch: 0,
+        bearing: 0,
+        duration: 800,
       });
       return;
     }
@@ -249,10 +254,10 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
     bounds.extend([primaryRider.lng, primaryRider.lat]);
     activePolygonRing.forEach((pt) => bounds.extend([pt[0], pt[1]]));
     map.fitBounds(bounds, {
-      padding: { top: 85, bottom: 85, left: 85, right: 85 },
-      maxZoom: 16.8,
-      pitch: 28,
-      duration: 950,
+      padding: { top: 70, bottom: 70, left: 70, right: 70 },
+      maxZoom: 17.2,
+      pitch: 0,
+      duration: 850,
     });
   }, [primaryRider, resolvedLng, resolvedLat, activePolygonRing]);
 
@@ -312,8 +317,9 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
         ],
       },
       center: [resolvedLng, resolvedLat],
-      zoom: 16.5,
-      pitch: 32,
+      zoom: 18.2,
+      pitch: 0,
+      bearing: 0,
     });
 
     map.addControl(
@@ -376,25 +382,23 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
     const map = mapRef.current;
     if (!map) return;
 
-    if (primaryRider) {
-      setViewMode("route");
+    if (viewMode === "route" && primaryRider) {
       const bounds = new maplibregl.LngLatBounds();
       bounds.extend([resolvedLng, resolvedLat]);
       bounds.extend([primaryRider.lng, primaryRider.lat]);
       activePolygonRing.forEach((pt) => bounds.extend([pt[0], pt[1]]));
       map.fitBounds(bounds, {
-        padding: { top: 85, bottom: 85, left: 85, right: 85 },
-        maxZoom: 16.8,
-        pitch: 28,
-        duration: 950,
+        padding: { top: 70, bottom: 70, left: 70, right: 70 },
+        maxZoom: 17.2,
+        pitch: 0,
+        duration: 850,
       });
     } else {
-      setViewMode("rooftop");
       map.flyTo({
         center: [resolvedLng, resolvedLat],
-        zoom: 17.6,
-        pitch: 35,
-        duration: 900,
+        zoom: 18.2,
+        pitch: 0,
+        duration: 800,
       });
     }
   }, [
@@ -458,12 +462,17 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
       );
     });
 
-    // Emergency Facility Markers
+    // Emergency Facility Markers (Pin on map without connecting line)
     emergencies.forEach((emg) => {
       const el = document.createElement("div");
       el.className =
-        "px-2 py-0.5 rounded-full border border-white bg-rose-500 text-[10px] font-mono font-bold text-white shadow-md whitespace-nowrap";
-      el.textContent = `✚ ${emg.category_or_status} (${Math.round(emg.distance_meters)}m)`;
+        "px-2.5 py-1 rounded-full border border-white/80 bg-rose-600/90 text-[10px] font-mono font-bold text-white shadow-lg backdrop-blur-sm whitespace-nowrap flex items-center gap-1.5 cursor-pointer transform hover:scale-105 transition";
+      const icon = emg.category_or_status?.includes("POLICE")
+        ? "🚓"
+        : emg.category_or_status?.includes("FIRE")
+          ? "🚒"
+          : "🏥";
+      el.textContent = `${icon} ${emg.name || emg.category_or_status} (${Math.round(emg.distance_meters)}m)`;
 
       markersRef.current.push(
         new maplibregl.Marker({ element: el })
@@ -570,19 +579,49 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
     primaryEmergency,
   ]);
 
+  const isLight = theme === "light";
+
   return (
-    <div className="relative overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-xl">
+    <div
+      className={`relative overflow-hidden rounded-2xl border shadow-xl ${
+        isLight
+          ? "border-slate-200 bg-white shadow-[0_20px_50px_-20px_rgba(15,23,42,0.12)] text-slate-800"
+          : "border-zinc-800 bg-zinc-950 text-white"
+      }`}
+    >
       {/* Top Telemetry & View Controls Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-800/80 bg-[#111116]/95 px-3.5 py-2 text-xs">
+      <div
+        className={`flex flex-wrap items-center justify-between gap-2 border-b px-3.5 py-2 text-xs ${
+          isLight
+            ? "border-slate-200 bg-slate-50/95"
+            : "border-zinc-800/80 bg-[#111116]/95"
+        }`}
+      >
         <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-md border border-emerald-500/30 bg-emerald-500/15 px-2 py-0.5 font-mono text-[10px] font-semibold text-emerald-300">
-            <span className="h-1.5 w-1.5 animate-ping rounded-full bg-emerald-400" />
+          <span
+            className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 font-mono text-[10px] font-semibold ${
+              isLight
+                ? "border-emerald-500/30 bg-emerald-50 text-emerald-700"
+                : "border-emerald-500/30 bg-emerald-500/15 text-emerald-300"
+            }`}
+          >
+            <span className="h-1.5 w-1.5 animate-ping rounded-full bg-emerald-500" />
             PostGIS EPSG:4326
           </span>
-          <span className="truncate font-mono text-xs font-bold text-white">
+          <span
+            className={`truncate font-mono text-xs font-bold ${
+              isLight ? "text-slate-900" : "text-white"
+            }`}
+          >
             {title || resolvedPostcode}
           </span>
-          <span className="rounded border border-emerald-500/30 bg-emerald-500/20 px-1.5 py-0.5 font-mono text-[10px] font-semibold text-emerald-300">
+          <span
+            className={`rounded border px-1.5 py-0.5 font-mono text-[10px] font-semibold ${
+              isLight
+                ? "border-emerald-500/30 bg-emerald-50 text-emerald-700"
+                : "border-emerald-500/30 bg-emerald-500/20 text-emerald-300"
+            }`}
+          >
             {uniqueVertices.length} Vertices
           </span>
         </div>
@@ -596,26 +635,38 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
               }
               className={`flex items-center gap-1 rounded-lg border px-2 py-1 font-mono text-[10px] font-semibold transition ${
                 viewMode === "route"
-                  ? "border-cyan-400 bg-cyan-400 text-zinc-950"
-                  : "border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25"
+                  ? isLight
+                    ? "border-cyan-600 bg-cyan-600 text-white"
+                    : "border-cyan-400 bg-cyan-400 text-zinc-950"
+                  : isLight
+                    ? "border-cyan-500/40 bg-cyan-50 text-cyan-700 hover:bg-cyan-100"
+                    : "border-cyan-500/40 bg-cyan-500/15 text-cyan-300 hover:bg-cyan-500/25"
               }`}
               title="Toggle between full Rider-to-Building route and Rooftop Polygon zoom"
             >
               <Maximize2 className="h-3 w-3" />
               <span>
-                {viewMode === "rooftop" ? "Fit Rider Route" : "Focus Rooftop"}
+                {viewMode === "rooftop" ? "Show Partner Route" : "Rooftop View"}
               </span>
             </button>
           )}
 
-          <div className="flex items-center rounded-lg border border-zinc-700 bg-[#08080A] p-0.5">
+          <div
+            className={`flex items-center rounded-lg border p-0.5 ${
+              isLight
+                ? "border-slate-300 bg-slate-100"
+                : "border-zinc-700 bg-[#08080A]"
+            }`}
+          >
             <button
               type="button"
               onClick={() => setMapStyleType("satellite")}
               className={`flex items-center gap-1 rounded px-2 py-0.5 text-[10px] font-semibold transition ${
                 mapStyleType === "satellite"
-                  ? "bg-emerald-500 text-zinc-950"
-                  : "text-zinc-400 hover:text-white"
+                  ? "bg-emerald-500 text-zinc-950 font-bold"
+                  : isLight
+                    ? "text-slate-600 hover:text-slate-900"
+                    : "text-zinc-400 hover:text-white"
               }`}
             >
               <Satellite className="h-3 w-3" />
@@ -626,19 +677,15 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
               onClick={() => setMapStyleType("streets")}
               className={`rounded px-2 py-0.5 text-[10px] font-semibold transition ${
                 mapStyleType === "streets"
-                  ? "bg-emerald-500 text-zinc-950"
-                  : "text-zinc-400 hover:text-white"
+                  ? "bg-emerald-500 text-zinc-950 font-bold"
+                  : isLight
+                    ? "text-slate-600 hover:text-slate-900"
+                    : "text-zinc-400 hover:text-white"
               }`}
             >
               Streets
             </button>
           </div>
-
-          {resolvedSource && (
-            <span className="hidden rounded border border-cyan-500/30 bg-cyan-500/10 px-2 py-0.5 font-semibold uppercase text-cyan-300 sm:inline-block">
-              {resolvedSource}
-            </span>
-          )}
         </div>
       </div>
 
@@ -665,30 +712,7 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
             </filter>
           </defs>
 
-          {/* 1. Emergency Facility Connection Line (Dashed Rose Vector) */}
-          {screenVectors.emergencyPt && primaryEmergency && (
-            <g>
-              <line
-                x1={screenVectors.emergencyPt.x}
-                y1={screenVectors.emergencyPt.y}
-                x2={screenVectors.center.x}
-                y2={screenVectors.center.y}
-                stroke="#f43f5e"
-                strokeWidth={5}
-                strokeOpacity={0.22}
-              />
-              <line
-                x1={screenVectors.emergencyPt.x}
-                y1={screenVectors.emergencyPt.y}
-                x2={screenVectors.center.x}
-                y2={screenVectors.center.y}
-                stroke="#fb7185"
-                strokeWidth={2.2}
-                strokeDasharray="6 6"
-                strokeOpacity={0.85}
-              />
-            </g>
-          )}
+          {/* Emergency center pins are shown directly on the map canvas; connection line removed as per requirement */}
 
           {/* 2. Nearest Rider to Postcode Location Connection Line (Glowing Dashed Cyan Vector) */}
           {screenVectors.riderPt && primaryRider && (
@@ -771,65 +795,46 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
               {/* Main Emerald Building Polygon Fill + Connecting Perimeter Lines */}
               <polygon
                 points={screenVectors.polygonPointsAttr}
-                fill="rgba(16, 185, 129, 0.32)"
-                stroke="#34d399"
-                strokeWidth={3}
+                fill="rgba(16, 185, 129, 0.24)"
+                stroke="#10b981"
+                strokeWidth={2.5}
                 strokeLinejoin="round"
                 filter="url(#glow-emerald)"
               />
 
-              {/* Interactive Corner Vertex Nodes (V1, V2, ...) */}
-              {screenVectors.vertices.map((v) => (
-                <g
-                  key={v.label}
-                  className="pointer-events-auto cursor-pointer"
+              {/* Vertex Corner Dots (Edges kept, bulky V1..Vn labels replaced with clean dots) */}
+              {screenVectors.vertices.map((v, idx) => (
+                <circle
+                  key={`v-dot-${idx}`}
+                  cx={v.x}
+                  cy={v.y}
+                  r={4.5}
+                  fill="#10b981"
+                  stroke="#ffffff"
+                  strokeWidth={1.5}
+                  className="pointer-events-auto cursor-pointer transition-transform hover:scale-150"
                   onMouseEnter={() =>
                     setHoveredVertex({
-                      label: v.label,
+                      label: `Corner ${idx + 1}`,
                       lng: v.lng,
                       lat: v.lat,
                     })
                   }
                   onMouseLeave={() => setHoveredVertex(null)}
-                >
-                  <circle
-                    cx={v.x}
-                    cy={v.y}
-                    r={6}
-                    fill="#08080A"
-                    stroke="#34d399"
-                    strokeWidth={2.5}
-                  />
-                  <rect
-                    x={v.x + 7}
-                    y={v.y - 16}
-                    width={22}
-                    height={15}
-                    rx={4}
-                    fill="#08080A"
-                    fillOpacity={0.9}
-                    stroke="#10b981"
-                    strokeWidth={1}
-                  />
-                  <text
-                    x={v.x + 18}
-                    y={v.y - 5}
-                    textAnchor="middle"
-                    fill="#6ee7b7"
-                    fontSize={9.5}
-                    fontWeight="bold"
-                    fontFamily="monospace"
-                  >
-                    {v.label}
-                  </text>
-                </g>
+                />
               ))}
             </g>
           )}
         </svg>
 
         {/* Floating Address & Active Rider Vector Card */}
-        <div className="pointer-events-none absolute left-3 top-3 z-10 max-w-xs space-y-1 rounded-xl border border-zinc-800/90 bg-zinc-950/90 px-3 py-2 backdrop-blur-md">
+        <div
+          className={`pointer-events-none absolute left-3 top-3 z-10 max-w-xs space-y-1 rounded-xl border px-3 py-2 backdrop-blur-md ${
+            isLight
+              ? "border-slate-200/90 bg-white/95 text-slate-800 shadow-md"
+              : "border-zinc-800/90 bg-zinc-950/90 text-zinc-200 shadow-xl"
+          }`}
+        >
           <div className="flex items-center gap-1.5 text-xs font-medium text-zinc-200">
             <Compass className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
             <span className="truncate">
@@ -846,17 +851,21 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
             </div>
           ) : (
             <p className="font-mono text-[10px] text-zinc-400">
-              Hover any V1–V{uniqueVertices.length} corner node to inspect
-              coordinates
+              Hover corner nodes to inspect coordinates
             </p>
           )}
         </div>
 
         {/* Hovered Vertex Coordinate HUD */}
         {hoveredVertex && (
-          <div className="pointer-events-none absolute bottom-3 left-3 z-10 rounded-lg border border-emerald-500/40 bg-[#08080A]/95 px-3 py-1.5 font-mono text-[11px] text-emerald-300 shadow-lg">
-            Vertex {hoveredVertex.label}: [{hoveredVertex.lng.toFixed(5)},{" "}
-            {hoveredVertex.lat.toFixed(5)}]
+          <div
+            className={`pointer-events-none absolute bottom-3 left-3 z-10 rounded-lg border px-3 py-1.5 font-mono text-[11px] shadow-lg ${
+              isLight
+                ? "border-emerald-500/40 bg-white/95 text-emerald-800"
+                : "border-emerald-500/40 bg-[#08080A]/95 text-emerald-300"
+            }`}
+          >
+            Corner: [{hoveredVertex.lng.toFixed(5)}, {hoveredVertex.lat.toFixed(5)}]
           </div>
         )}
 
@@ -872,7 +881,13 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
       </div>
 
       {/* Bottom Legend Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-2 border-t border-zinc-800/80 bg-zinc-900/90 px-3.5 py-2 text-[11px] text-zinc-400">
+      <div
+        className={`flex flex-wrap items-center justify-between gap-2 border-t px-3.5 py-2 text-[11px] ${
+          isLight
+            ? "border-slate-200 bg-slate-50/95 text-slate-600"
+            : "border-zinc-800/80 bg-zinc-900/90 text-zinc-400"
+        }`}
+      >
         <div className="flex flex-wrap items-center gap-4">
           <span className="flex items-center gap-1.5">
             <span className="h-2.5 w-2.5 rounded-sm border border-emerald-400 bg-emerald-500/40" />
@@ -891,7 +906,7 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
           {emergencies.length > 0 && (
             <span className="flex items-center gap-1.5 text-rose-300">
               <ShieldAlert className="h-3 w-3" />
-              <span>Emergency Vector ({emergencies.length})</span>
+              <span>Emergency Services ({emergencies.length})</span>
             </span>
           )}
         </div>

@@ -48,7 +48,7 @@ function postcode360_enqueue_scripts() {
 
     wp_localize_script('postcode360-widget-sdk', 'Postcode360Config', array(
         'apiBaseUrl'     => 'http://localhost:8000',
-        'publishableKey' => 'pk_test_findam_abuja_01',
+        'publishableKey' => 'pk_test_postcode360_abuja_01',
         'origin'         => site_url(),
         'forceMock'      => true,
     ));

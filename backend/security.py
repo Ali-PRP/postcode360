@@ -11,10 +11,10 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "findam-super-secret-jwt-signing-key-2026")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "postcode360-super-secret-jwt-signing-key-2026")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRY_SECONDS = int(os.getenv("JWT_EXPIRY_SECONDS", "1800"))  # 30 minutes
-PII_HASH_SALT = os.getenv("PII_HASH_SALT", "findam-pii-hmac-salt-nigeria-2026")
+PII_HASH_SALT = os.getenv("PII_HASH_SALT", "postcode360-pii-hmac-salt-nigeria-2026")
 
 DEFAULT_ALLOWED_ORIGINS = [
     origin.strip().rstrip("/")
@@ -27,12 +27,16 @@ DEFAULT_ALLOWED_ORIGINS = [
 
 # Origin-bound publishable key registry (maps publishable_key -> allowed origins & merchant metadata)
 ORIGIN_BOUND_KEYS = {
-    os.getenv("NIPOST_PUBLISHABLE_KEY", "pk_test_findam_abuja_01"): {
-        "merchant_id": "merch_findam_default",
+    os.getenv("NIPOST_PUBLISHABLE_KEY", "pk_test_postcode360_abuja_01"): {
+        "merchant_id": "merch_postcode360_default",
+        "allowed_origins": DEFAULT_ALLOWED_ORIGINS,
+    },
+    "pk_test_postcode360_abuja_01": {
+        "merchant_id": "merch_postcode360_sandbox",
         "allowed_origins": DEFAULT_ALLOWED_ORIGINS,
     },
     "pk_test_findam_abuja_01": {
-        "merchant_id": "merch_abuja_sandbox",
+        "merchant_id": "merch_postcode360_legacy",
         "allowed_origins": DEFAULT_ALLOWED_ORIGINS,
     },
 }

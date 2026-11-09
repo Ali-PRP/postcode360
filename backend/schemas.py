@@ -1,4 +1,4 @@
-﻿from typing import List, Optional
+from typing import List, Optional
 from pydantic import BaseModel, Field
 
 class LookupRequest(BaseModel):
@@ -32,7 +32,7 @@ class LookupResponse(BaseModel):
     data: PostcodeData
 
 class WidgetSessionRequest(BaseModel):
-    publishable_key: str = Field(default="pk_test_findam_abuja_01")
+    publishable_key: str = Field(default="pk_test_postcode360_abuja_01")
     nin: Optional[str] = None
     email: Optional[str] = None
 
@@ -51,8 +51,9 @@ class OrderCreateRequest(BaseModel):
     postcode: str
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
-    amount_ngn: Optional[float] = None
+    amount_ngn: Optional[float] = 180000.0
     notes: Optional[str] = None
+    social_store_slug: Optional[str] = None
 
 class OrderResponse(BaseModel):
     status: str = Field(default="success")
@@ -63,8 +64,9 @@ class OrderResponse(BaseModel):
     district: Optional[str] = None
     customer_name: Optional[str] = None
     customer_phone: Optional[str] = None
-    amount_ngn: Optional[float] = None
+    amount_ngn: Optional[float] = 180000.0
     notes: Optional[str] = None
+    social_store_slug: Optional[str] = None
     delivery_address: str
     lat: float
     lng: float
@@ -95,3 +97,32 @@ class NearestSearchResponse(BaseModel):
     radius_meters: float
     count: int
     results: List[NearestItem]
+
+class SocialProductItem(BaseModel):
+    id: str
+    title: str
+    price_ngn: float
+    category: str
+    description: Optional[str] = None
+    image_url: Optional[str] = None
+    stock_count: int = 10
+    product_link: str
+
+class SocialStoreRecord(BaseModel):
+    store_slug: str
+    merchant_name: str
+    merchant_handle: Optional[str] = None
+    merchant_phone: str
+    pickup_postcode: str
+    pickup_location: Optional[dict] = None
+    bio_link: str
+    products: List[SocialProductItem] = []
+    created_at: Optional[str] = None
+
+class SocialStoreCreateRequest(BaseModel):
+    store_slug: Optional[str] = None
+    merchant_name: str
+    merchant_handle: Optional[str] = None
+    merchant_phone: str
+    pickup_postcode: str
+    products: Optional[List[SocialProductItem]] = None

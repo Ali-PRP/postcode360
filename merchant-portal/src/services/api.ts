@@ -1,13 +1,27 @@
-﻿import type {
+import type {
+  AliasMintRequest,
+  AliasRecord,
   ApiTelemetryEntry,
+  BookmarksResponse,
   HealthResponse,
   LookupRequest,
   LookupResponse,
   NearestItem,
   NearestSearchResponse,
+  OfflineTilePack,
   OrderCreateRequest,
   OrderResponse,
+  PodSubmitRequest,
+  PodSubmitResponse,
   PostcodeData,
+  RiderRecord,
+  SearchPostcodeResponse,
+  DeliveryProofsResponse,
+  SocialStoreCreateRequest,
+  SocialStoreRecord,
+  SosIncidentRecord,
+  SosTriggerRequest,
+  UssdDialResponse,
   WidgetSessionRequest,
   WidgetSessionResponse,
 } from "../types/postcode360";
@@ -18,7 +32,7 @@ const API_BASE_URL =
   "http://localhost:8000";
 
 export const DEFAULT_PUBLISHABLE_KEY =
-  import.meta.env.VITE_POSTCODE360_PUBLIC_KEY || "pk_test_findam_abuja_01";
+  import.meta.env.VITE_POSTCODE360_PUBLIC_KEY || "pk_test_postcode360_abuja_01";
 
 export const ABUJA_MOCK_POSTCODES: Record<string, PostcodeData> = {
   "FC-02-A09-DB-09": {
@@ -170,7 +184,7 @@ const ABUJA_RIDERS_FLEET = [
     lng: 7.4868,
     category_or_status: "AVAILABLE",
     rating: 4.94,
-    zone: "Wuse II / Aminu Kano",
+    zone: "Express Dispatch",
   },
   {
     id: "RDR-ABJ-219",
@@ -182,7 +196,7 @@ const ABUJA_RIDERS_FLEET = [
     lng: 7.4931,
     category_or_status: "AVAILABLE",
     rating: 4.88,
-    zone: "Wuse Zone 4 / Adetokunbo",
+    zone: "Metro Courier",
   },
   {
     id: "RDR-ABJ-308",
@@ -194,108 +208,56 @@ const ABUJA_RIDERS_FLEET = [
     lng: 7.4969,
     category_or_status: "AVAILABLE",
     rating: 4.97,
-    zone: "Maitama / Yedseram",
-  },
-  {
-    id: "RDR-ABJ-412",
-    name: "Sadiq Abdullahi",
-    phone: "+2347065544332",
-    vehicle: "Yamaha Crux Rev",
-    plate: "GWA-774-AB",
-    lat: 9.0462,
-    lng: 7.4955,
-    category_or_status: "AVAILABLE",
-    rating: 4.85,
-    zone: "Garki Area 11 / Area 8",
-  },
-  {
-    id: "RDR-ABJ-509",
-    name: "Emmanuel Eze",
-    phone: "+2348056677889",
-    vehicle: "Honda Ace CB125",
-    plate: "AMAC-512-KT",
-    lat: 9.0602,
-    lng: 7.4791,
-    category_or_status: "AVAILABLE",
-    rating: 4.91,
-    zone: "Central Business District",
-  },
-  {
-    id: "RDR-ABJ-615",
-    name: "Yakubu Garba",
-    phone: "+2348182233445",
-    vehicle: "TVS HLX 125 Courier",
-    plate: "ABJ-881-JB",
-    lat: 9.0665,
-    lng: 7.4281,
-    category_or_status: "AVAILABLE",
-    rating: 4.92,
-    zone: "Jabi Lake / Utako",
+    zone: "Central Sector",
   },
 ];
 
 const ABUJA_EMERGENCY_NODES = [
   {
     id: "EMG-HOSP-01",
-    name: "Maitama District General Hospital",
+    name: "District General Trauma Hospital",
     category_or_status: "HOSPITAL",
-    phone: "+2348031230099",
-    address: "60 Aguiyi Ironsi St, Maitama, Abuja",
+    phone: "112",
+    address: "Central Emergency Medical Corridor",
     lat: 9.0842,
     lng: 7.4938,
     trauma_level: "Level 1 Emergency & Ambulance Bay",
   },
   {
-    id: "EMG-HOSP-02",
-    name: "National Hospital Abuja (Trauma Centre)",
-    category_or_status: "HOSPITAL",
-    phone: "+2348090001122",
-    address: "Plot 132 Central Business District, Abuja",
-    lat: 9.0389,
-    lng: 7.4638,
-    trauma_level: "Federal Tertiary Referral Center",
-  },
-  {
-    id: "EMG-HOSP-03",
-    name: "Cedarcrest Hospitals Abuja",
-    category_or_status: "HOSPITAL",
-    phone: "+2349093334455",
-    address: "2 Sam Mbakwe St, Apo / Garki II, Abuja",
-    lat: 9.0265,
-    lng: 7.4988,
-    trauma_level: "24/7 Critical Care & Dispatch",
-  },
-  {
     id: "EMG-POL-01",
-    name: "Wuse Zone 3 Divisional Police HQ",
+    name: "Divisional Police Rapid Response HQ",
     category_or_status: "POLICE",
-    phone: "+2348032003913",
-    address: "Abidjan St, Wuse Zone 3, Abuja",
+    phone: "112",
+    address: "Metropolitan Tactical Command",
     lat: 9.0648,
     lng: 7.4754,
-    trauma_level: "FCT Rapid Response Squad (RRS)",
-  },
-  {
-    id: "EMG-POL-02",
-    name: "Maitama Area Command Police Station",
-    category_or_status: "POLICE",
-    phone: "+2347057337653",
-    address: "Shehu Shagari Way, Maitama, Abuja",
-    lat: 9.0891,
-    lng: 7.4912,
-    trauma_level: "Diplomatic & Tactical Patrol Unit",
+    trauma_level: "Rapid Response Squad (RRS)",
   },
   {
     id: "EMG-FIRE-01",
-    name: "FCT Fire Service Wuse Command",
+    name: "Federal Fire & Rescue Service",
     category_or_status: "FIRE",
     phone: "112",
-    address: "Herbert Macaulay Way, Wuse Zone 4, Abuja",
+    address: "Metropolitan Fire & Hazmat Command",
     lat: 9.068,
     lng: 7.472,
-    trauma_level: "Metropolitan Fire & Hazmat Response",
+    trauma_level: "24/7 Fire & Rescue Unit",
   },
 ];
+
+// Cache of resolved postcodes in the frontend session so createOrder/listOrders always know any looked-up code
+export const resolvedSessionCache = new Map<string, PostcodeData>(
+  Object.entries(ABUJA_MOCK_POSTCODES),
+);
+
+export function normalizeCanonicalPostcode(raw: string): string {
+  const cleaned = raw.trim().toUpperCase();
+  const compact = cleaned.replace(/[\s-]+/g, "");
+  if (/^[A-Z]{2}\d{2}[A-Z0-9]{3}[A-Z]{2}\d{2}$/.test(compact)) {
+    return `${compact.slice(0, 2)}-${compact.slice(2, 4)}-${compact.slice(4, 7)}-${compact.slice(7, 9)}-${compact.slice(9, 11)}`;
+  }
+  return cleaned.replace(/\s+/g, "-");
+}
 
 function computeHaversineMeters(
   lat1: number,
@@ -317,36 +279,113 @@ function computeHaversineMeters(
 }
 
 function enrichPostcodeData(place: PostcodeData): PostcodeData {
-  const preset = ABUJA_MOCK_POSTCODES[place.postcode];
-  const parts = (place.postcode || "FC-02-A09-DB-09").split("-");
-  return {
-    ...preset,
+  const canonical = normalizeCanonicalPostcode(place.postcode || "FC-02-A09-DB-09");
+  const preset = ABUJA_MOCK_POSTCODES[canonical];
+  const parts = canonical.split("-");
+  const statePrefix = parts[0] || "FC";
+
+  const enriched: PostcodeData = {
+    ...(preset || {}),
     ...place,
+    postcode: canonical,
+    formatted: place.formatted || canonical.replace(/-/g, " "),
     tier1_state:
-      place.tier1_state || preset?.tier1_state || "FC (FCT Abuja)",
+      place.tier1_state && place.tier1_state !== "FC (FCT Abuja)"
+        ? place.tier1_state
+        : preset?.tier1_state || `${statePrefix} (${place.state || "Nigeria"})`,
     tier2_sector:
       place.tier2_sector ||
       preset?.tier2_sector ||
-      `${parts[1] || "02"}-${parts[2] || "A09"} (${place.district || "Abuja Sector"})`,
+      `${parts[1] || "01"}-${parts[2] || "A01"} (${place.district || place.lga || "Sector"})`,
     tier3_unit:
       place.tier3_unit ||
       preset?.tier3_unit ||
-      `${parts.slice(3).join("-") || "DB-09"} (Verified Parcel)`,
-    nipost_legacy: place.nipost_legacy || preset?.nipost_legacy || "900288",
-    plus_code: place.plus_code || preset?.plus_code || "6FX93FGP+JM",
+      `${parts.slice(3).join("-") || "01"} (Verified Parcel)`,
+    nipost_legacy: place.nipost_legacy || preset?.nipost_legacy || "NIPOST-L3",
+    plus_code: place.plus_code || preset?.plus_code || "NIPOST-VERIFIED",
     building_type:
       place.building_type ||
       preset?.building_type ||
-      "Commercial / Boutique Mixed-Use",
+      "Verified Spatial Parcel",
     building_polygon:
       place.building_polygon && place.building_polygon.length >= 3
         ? place.building_polygon
-        : preset?.building_polygon ||
-          ABUJA_MOCK_POSTCODES["FC-02-A09-DB-09"].building_polygon,
+        : preset?.building_polygon || [
+            [place.lng - 0.00018, place.lat + 0.00015],
+            [place.lng + 0.00018, place.lat + 0.00015],
+            [place.lng + 0.00018, place.lat - 0.00015],
+            [place.lng - 0.00018, place.lat - 0.00015],
+            [place.lng - 0.00018, place.lat + 0.00015],
+          ],
   };
+
+  resolvedSessionCache.set(canonical, enriched);
+  return enriched;
 }
 
-const fallbackOrders = new Map<string, OrderResponse>();
+const INITIAL_PRESEEDED_ORDERS: OrderResponse[] = [
+  {
+    status: "success",
+    idempotent_replay: false,
+    order_id: "ORD-ABJ-9401",
+    idempotency_key: "ord-wuse2-2026-001",
+    postcode: "FC-02-A09-DB-09",
+    district: "Wuse II",
+    customer_name: "Amina Bello",
+    customer_phone: "+2348039912001",
+    amount_ngn: 180000,
+    notes: "Gate 2, opposite Access Bank",
+    delivery_address:
+      "42 Adetokunbo Ademola Crescent, Wuse II, AMAC, Federal Capital Territory",
+    lat: 9.0765,
+    lng: 7.4892,
+    building_polygon: ABUJA_MOCK_POSTCODES["FC-02-A09-DB-09"].building_polygon,
+    assigned_rider: "Musa Ibrahim (Wuse Rider)",
+    order_status: "DISPATCHED",
+  },
+  {
+    status: "success",
+    idempotent_replay: false,
+    order_id: "ORD-ABJ-9402",
+    idempotency_key: "ord-maitama-2026-002",
+    postcode: "FC-01-M04-MA-03",
+    district: "Maitama",
+    customer_name: "Dr. Usman Farouk",
+    customer_phone: "+2348021123456",
+    amount_ngn: 100000,
+    notes: "Diplomatic zone, ring bell at white gate",
+    delivery_address:
+      "9 Yedseram / Aguiyi Ironsi Street, Maitama, AMAC, Federal Capital Territory",
+    lat: 9.0882,
+    lng: 7.4934,
+    building_polygon: ABUJA_MOCK_POSTCODES["FC-01-M04-MA-03"].building_polygon,
+    assigned_rider: null,
+    order_status: "PENDING",
+  },
+  {
+    status: "success",
+    idempotent_replay: false,
+    order_id: "ORD-ABJ-9403",
+    idempotency_key: "ord-garki-2026-003",
+    postcode: "FC-02-B12-GA-01",
+    district: "Garki Area 11",
+    customer_name: "Zainab Ahmed",
+    customer_phone: "+2348053344556",
+    amount_ngn: 60000,
+    notes: "Compound 18 detached duplex",
+    delivery_address:
+      "18 Tafawa Balewa Way / Ahmadu Bello Way, Garki Area 11, AMAC, Federal Capital Territory",
+    lat: 9.0385,
+    lng: 7.5012,
+    building_polygon: ABUJA_MOCK_POSTCODES["FC-02-B12-GA-01"].building_polygon,
+    assigned_rider: null,
+    order_status: "PENDING",
+  },
+];
+
+const fallbackOrders = new Map<string, OrderResponse>(
+  INITIAL_PRESEEDED_ORDERS.map((ord) => [ord.idempotency_key, ord]),
+);
 const orderOverrides = new Map<
   string,
   { order_status?: string; assigned_rider?: string | null }
@@ -384,6 +423,16 @@ async function handleResponse<T>(response: Response): Promise<T> {
     throw new Error(errorDetail);
   }
   return response.json() as Promise<T>;
+}
+
+export interface AutocompleteSuggestion {
+  postcode: string;
+  display: string;
+  compact: string;
+  state?: string;
+  lga?: string;
+  district?: string;
+  street?: string;
 }
 
 export const postcode360Api = {
@@ -503,9 +552,39 @@ export const postcode360Api = {
     }
   },
 
+  async autocompletePostcode(query: string): Promise<AutocompleteSuggestion[]> {
+    if (!query.trim()) return [];
+    try {
+      const params = new URLSearchParams({ q: query.trim() });
+      const res = await fetch(`${API_BASE_URL}/v1/search/autocomplete?${params}`);
+      const json = await handleResponse<{
+        data?: { suggestions?: AutocompleteSuggestion[] };
+      }>(res);
+      return json?.data?.suggestions || [];
+    } catch {
+      const cleanQ = query.trim().toUpperCase().replace(/[\s-]+/g, "");
+      return Array.from(resolvedSessionCache.values())
+        .filter(
+          (item) =>
+            item.postcode.replace(/-/g, "").includes(cleanQ) ||
+            (item.district || "").toUpperCase().includes(query.trim().toUpperCase()),
+        )
+        .slice(0, 8)
+        .map((item) => ({
+          postcode: item.postcode,
+          display: item.formatted,
+          compact: item.postcode.replace(/-/g, ""),
+          state: item.state,
+          lga: item.lga,
+          district: item.district || undefined,
+          street: item.street || undefined,
+        }));
+    }
+  },
+
   async lookupPostcode(payload: LookupRequest): Promise<LookupResponse> {
     const t0 = performance.now();
-    const normalized = payload.code.trim().toUpperCase().replace(/\s+/g, "-");
+    const normalized = normalizeCanonicalPostcode(payload.code);
     const reqBody = { ...payload, code: normalized };
     try {
       const res = await fetch(`${API_BASE_URL}/v1/lookup`, {
@@ -527,8 +606,8 @@ export const postcode360Api = {
         data: enrichPostcodeData(data.data),
       };
     } catch {
-      const match = ABUJA_MOCK_POSTCODES[normalized];
-      if (match) {
+      const cached = resolvedSessionCache.get(normalized);
+      if (cached) {
         emitTelemetry({
           method: "POST",
           endpoint: "/v1/lookup",
@@ -539,236 +618,39 @@ export const postcode360Api = {
         });
         return {
           status: "success",
-          source: "TIER_1_REDIS_CACHE",
+          source: "mock_cache",
           latency_ms: 8.4,
-          data: match,
+          data: cached,
         };
       }
-      // State-Aware Tier-3 Nigerian Postcode Synthesizer
-      const NIGERIA_STATES: Record<
-        string,
-        {
-          state: string;
-          tier1: string;
-          lga: string;
-          district: string;
-          street: string;
-          lat: number;
-          lng: number;
-          nipost: string;
-          plus: string;
-        }
-      > = {
-        FC: {
-          state: "Federal Capital Territory",
-          tier1: "FC (FCT Abuja)",
-          lga: "AMAC",
-          district: "Wuse II / Central",
-          street: "Shehu Shagari Way",
-          lat: 9.0765,
-          lng: 7.4892,
-          nipost: "900211",
-          plus: "6FX93FGP+JM",
-        },
-        LA: {
-          state: "Lagos State",
-          tier1: "LA (Lagos State)",
-          lga: "Eti-Osa / Ikeja",
-          district: "Victoria Island",
-          street: "Adeola Odeku Street",
-          lat: 6.4281,
-          lng: 3.4219,
-          nipost: "101241",
-          plus: "6FR5CCG9+6Q",
-        },
-        KN: {
-          state: "Kano State",
-          tier1: "KN (Kano State)",
-          lga: "Nassarawa / Kano Municipal",
-          district: "Bompai / Ahmadu Bello",
-          street: "Murtala Mohammed Way",
-          lat: 12.0022,
-          lng: 8.5920,
-          nipost: "700211",
-          plus: "7F4C2H2R+VR",
-        },
-        RV: {
-          state: "Rivers State",
-          tier1: "RV (Rivers State)",
-          lga: "Port Harcourt City",
-          district: "Old GRA / Trans-Amadi",
-          street: "Aba Road",
-          lat: 4.8156,
-          lng: 7.0498,
-          nipost: "500272",
-          plus: "6FpxR28X+6W",
-        },
-        OY: {
-          state: "Oyo State",
-          tier1: "OY (Oyo State)",
-          lga: "Ibadan North",
-          district: "Bodija / Agodi GRA",
-          street: "Awolowo Avenue",
-          lat: 7.4196,
-          lng: 3.9088,
-          nipost: "200221",
-          plus: "6FR5CW95+RG",
-        },
-        KD: {
-          state: "Kaduna State",
-          tier1: "KD (Kaduna State)",
-          lga: "Kaduna North",
-          district: "Ungwan Rimi GRA",
-          street: "Ahmadu Bello Way",
-          lat: 10.5264,
-          lng: 7.4388,
-          nipost: "800211",
-          plus: "7F29GCHQ+HG",
-        },
-        EN: {
-          state: "Enugu State",
-          tier1: "EN (Enugu State)",
-          lga: "Enugu North",
-          district: "Independence Layout",
-          street: "Okpara Avenue",
-          lat: 6.4584,
-          lng: 7.5464,
-          nipost: "400211",
-          plus: "6FX9FG5W+9H",
-        },
-        ED: {
-          state: "Edo State",
-          tier1: "ED (Edo State)",
-          lga: "Oredo",
-          district: "GRA Benin City",
-          street: "Sapele Road",
-          lat: 6.3176,
-          lng: 5.6145,
-          nipost: "300251",
-          plus: "6FR78J97+2R",
-        },
-        AN: {
-          state: "Anambra State",
-          tier1: "AN (Anambra State)",
-          lga: "Awka South",
-          district: "Udoka Housing Estate",
-          street: "Zik Avenue",
-          lat: 6.2105,
-          lng: 7.0723,
-          nipost: "420211",
-          plus: "6FX9636C+6W",
-        },
-        OG: {
-          state: "Ogun State",
-          tier1: "OG (Ogun State)",
-          lga: "Abeokuta South",
-          district: "Ibara GRA",
-          street: "Presidential Boulevard",
-          lat: 7.1475,
-          lng: 3.3619,
-          nipost: "110211",
-          plus: "6FR549X6+2Q",
-        },
-        DT: {
-          state: "Delta State",
-          tier1: "DT (Delta State)",
-          lga: "Oshimili South",
-          district: "Asaba Core Area",
-          street: "Nnebisi Road",
-          lat: 6.2059,
-          lng: 6.6959,
-          nipost: "320211",
-          plus: "6FR86M4W+99",
-        },
-        PL: {
-          state: "Plateau State",
-          tier1: "PL (Plateau State)",
-          lga: "Jos North",
-          district: "Rayfield / Jos Central",
-          street: "Yakubu Gowon Way",
-          lat: 9.8965,
-          lng: 8.8583,
-          nipost: "930211",
-          plus: "6FXCVVWH+J8",
-        },
-      };
-
-      const parts = normalized.split("-");
-      const statePrefix = parts[0] || "";
-      const stateMeta = NIGERIA_STATES[statePrefix];
-
-      if (!stateMeta || parts.length < 3) {
-        throw new Error(
-          `Postcode '${normalized}' has an unrecognized state prefix ('${statePrefix}'). Valid prefixes include FC (Abuja), LA (Lagos), KN (Kano), RV (Rivers), OY (Oyo), KD (Kaduna), EN (Enugu).`,
-        );
-      }
-
-      const offsetSeed =
-        normalized.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0) % 9;
-      const synthLat = stateMeta.lat + (offsetSeed - 4) * 0.0004;
-      const synthLng = stateMeta.lng + (offsetSeed - 4) * 0.0004;
-      const synthPoly = [
-        [synthLng - 0.00022, synthLat + 0.00018],
-        [synthLng + 0.00022, synthLat + 0.00020],
-        [synthLng + 0.00025, synthLat - 0.00016],
-        [synthLng - 0.00004, synthLat - 0.00020],
-        [synthLng - 0.00024, synthLat - 0.00004],
-        [synthLng - 0.00022, synthLat + 0.00018],
-      ];
-
-      emitTelemetry({
-        method: "POST",
-        endpoint: "/v1/lookup",
-        requestBody: reqBody,
-        status: 200,
-        mode: "POSTGIS_SANDBOX",
-        latencyMs: 18.4,
-      });
-
-      return {
-        status: "success",
-        source: `TIER_2_${statePrefix}_SYNTH_GRID`,
-        latency_ms: 18.4,
-        data: {
-          postcode: normalized,
-          formatted: normalized.replace(/-/g, " "),
-          state: stateMeta.state,
-          lga: stateMeta.lga,
-          district: stateMeta.district,
-          street: `Plot ${parts[4] || "01"} ${stateMeta.street}`,
-          tier1_state: stateMeta.tier1,
-          tier2_sector: `${parts[1] || "01"}-${parts[2] || "A01"} (${stateMeta.district})`,
-          tier3_unit: `${parts[3] || "AA"}-${parts[4] || "01"} (Verified Parcel)`,
-          nipost_legacy: stateMeta.nipost,
-          plus_code: stateMeta.plus,
-          building_type: "Commercial / Mixed-Use Parcel",
-          lat: +synthLat.toFixed(4),
-          lng: +synthLng.toFixed(4),
-          building_polygon: synthPoly,
-          confidence: 0.94,
-          verified: true,
-          is_alias: false,
-        },
-      };
+      throw new Error(
+        `Postcode '${normalized}' could not be resolved. Ensure FastAPI is running on ${API_BASE_URL} or select a preloaded postcode.`,
+      );
     }
   },
 
   async createOrder(payload: OrderCreateRequest): Promise<OrderResponse> {
     const t0 = performance.now();
+    const normCode = normalizeCanonicalPostcode(payload.postcode);
+    const reqPayload = { ...payload, postcode: normCode };
     try {
       const res = await fetch(`${API_BASE_URL}/orders`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify(reqPayload),
       });
       const data = await handleResponse<OrderResponse>(res);
       if (data.idempotent_replay) {
         replaysBlockedCount += 1;
       }
-      const preset = ABUJA_MOCK_POSTCODES[data.postcode];
+      const cachedPlace = resolvedSessionCache.get(data.postcode);
       const enriched: OrderResponse = {
         ...data,
-        district: data.district || preset?.district || "Wuse II",
+        district:
+          data.district ||
+          cachedPlace?.district ||
+          cachedPlace?.lga ||
+          "Verified Sector",
         customer_name:
           data.customer_name || payload.customer_name || "Hajiya Amina",
         customer_phone:
@@ -780,7 +662,7 @@ export const postcode360Api = {
       emitTelemetry({
         method: "POST",
         endpoint: "/orders",
-        requestBody: payload,
+        requestBody: reqPayload,
         status: res.status,
         mode: "FASTAPI_LIVE",
         latencyMs: +(performance.now() - t0).toFixed(1),
@@ -793,7 +675,7 @@ export const postcode360Api = {
         emitTelemetry({
           method: "POST",
           endpoint: "/orders",
-          requestBody: payload,
+          requestBody: reqPayload,
           status: 200,
           mode: "POSTGIS_SANDBOX",
           latencyMs: 7.8,
@@ -801,20 +683,20 @@ export const postcode360Api = {
         return { ...existing, idempotent_replay: true };
       }
       const place =
-        ABUJA_MOCK_POSTCODES[payload.postcode] ||
+        resolvedSessionCache.get(normCode) ||
         ABUJA_MOCK_POSTCODES["FC-02-A09-DB-09"];
       const created: OrderResponse = {
         status: "success",
         idempotent_replay: false,
-        order_id: `ORD-ABJ-${Math.floor(9405 + fallbackOrders.size)}`,
+        order_id: `ORD-NG-${Math.floor(9405 + fallbackOrders.size)}`,
         idempotency_key: payload.idempotency_key,
         postcode: place.postcode,
-        district: place.district,
+        district: place.district || place.lga,
         customer_name: payload.customer_name || "Hajiya Amina",
         customer_phone: payload.customer_phone || "+2348030001122",
         amount_ngn: payload.amount_ngn || 28500,
         notes: payload.notes || "Blue gate beside pharmacy",
-        delivery_address: `${place.street}, ${place.district}, ${place.lga}`,
+        delivery_address: `${place.street}, ${place.district}, ${place.lga}, ${place.state}`,
         lat: place.lat,
         lng: place.lng,
         building_polygon: place.building_polygon,
@@ -824,7 +706,7 @@ export const postcode360Api = {
       emitTelemetry({
         method: "POST",
         endpoint: "/orders",
-        requestBody: payload,
+        requestBody: reqPayload,
         status: 201,
         mode: "POSTGIS_SANDBOX",
         latencyMs: 11.4,
@@ -845,25 +727,52 @@ export const postcode360Api = {
         mode: "FASTAPI_LIVE",
         latencyMs: +(performance.now() - t0).toFixed(1),
       });
-      return list.map((ord) => {
+      const enrichedList: OrderResponse[] = list.map((ord): OrderResponse => {
         const local = fallbackOrders.get(ord.idempotency_key);
         const override = orderOverrides.get(ord.order_id);
-        const preset = ABUJA_MOCK_POSTCODES[ord.postcode];
+        const cachedPlace = resolvedSessionCache.get(ord.postcode);
         return {
           ...ord,
-          district: ord.district || preset?.district || "Abuja AMAC",
+          district:
+            ord.district ||
+            cachedPlace?.district ||
+            cachedPlace?.lga ||
+            "Verified Sector",
           customer_name:
             ord.customer_name || local?.customer_name || "Hajiya Amina",
           customer_phone:
             ord.customer_phone || local?.customer_phone || "+2348030001122",
           amount_ngn: ord.amount_ngn ?? local?.amount_ngn ?? 28500,
           notes: ord.notes ?? local?.notes ?? "Blue gate beside pharmacy",
-          building_polygon: ord.building_polygon || preset?.building_polygon,
+          building_polygon:
+            ord.building_polygon || cachedPlace?.building_polygon,
           order_status: override?.order_status || ord.order_status,
           assigned_rider:
             override?.assigned_rider ?? ord.assigned_rider ?? null,
         };
       });
+
+      const merged: OrderResponse[] = [...enrichedList];
+      for (const fallback of fallbackOrders.values()) {
+        const exists = merged.some(
+          (m) =>
+            m.order_id === fallback.order_id ||
+            m.idempotency_key === fallback.idempotency_key,
+        );
+        if (!exists) {
+          const override = orderOverrides.get(fallback.order_id);
+          const item: OrderResponse = {
+            ...fallback,
+            order_status: override?.order_status || fallback.order_status,
+            assigned_rider:
+              override?.assigned_rider !== undefined
+                ? override.assigned_rider
+                : fallback.assigned_rider,
+          };
+          merged.push(item);
+        }
+      }
+      return merged;
     } catch {
       emitTelemetry({
         method: "GET",
@@ -872,7 +781,17 @@ export const postcode360Api = {
         mode: "POSTGIS_SANDBOX",
         latencyMs: 9.2,
       });
-      return Array.from(fallbackOrders.values());
+      return Array.from(fallbackOrders.values()).map((ord) => {
+        const override = orderOverrides.get(ord.order_id);
+        return {
+          ...ord,
+          order_status: override?.order_status || ord.order_status,
+          assigned_rider:
+            override?.assigned_rider !== undefined
+              ? override.assigned_rider
+              : ord.assigned_rider,
+        };
+      });
     }
   },
 
@@ -933,8 +852,7 @@ export const postcode360Api = {
       const enrichedResults: NearestItem[] = data.results.map((r, idx) => {
         const fleetPreset = ABUJA_RIDERS_FLEET[idx % ABUJA_RIDERS_FLEET.length];
         const dist =
-          r.distance_meters ||
-          computeHaversineMeters(lat, lng, r.lat, r.lng);
+          r.distance_meters || computeHaversineMeters(lat, lng, r.lat, r.lng);
         return {
           ...fleetPreset,
           ...r,
@@ -955,10 +873,16 @@ export const postcode360Api = {
       });
       return { ...data, results: enrichedResults };
     } catch {
-      const sorted = ABUJA_RIDERS_FLEET.map((r) => {
-        const distance_meters = computeHaversineMeters(lat, lng, r.lat, r.lng);
+      const sorted = ABUJA_RIDERS_FLEET.map((r, idx) => {
+        const rLat = +(lat + ((idx % 3) - 1) * 0.0014 + 0.0008).toFixed(6);
+        const rLng = +(lng + (((idx >> 1) % 3) - 1) * 0.0014 - 0.0007).toFixed(
+          6,
+        );
+        const distance_meters = computeHaversineMeters(lat, lng, rLat, rLng);
         return {
           ...r,
+          lat: rLat,
+          lng: rLng,
           distance_meters,
           eta_mins: Math.max(2, Math.round(distance_meters / 320)),
         };
@@ -1022,12 +946,16 @@ export const postcode360Api = {
     } catch {
       const filtered = ABUJA_EMERGENCY_NODES.filter(
         (f) => f.category_or_status === type,
-      )
-        .map((f) => ({
+      ).map((f) => {
+        const eLat = +(lat - 0.0021).toFixed(6);
+        const eLng = +(lng - 0.0019).toFixed(6);
+        return {
           ...f,
-          distance_meters: computeHaversineMeters(lat, lng, f.lat, f.lng),
-        }))
-        .sort((a, b) => a.distance_meters - b.distance_meters);
+          lat: eLat,
+          lng: eLng,
+          distance_meters: computeHaversineMeters(lat, lng, eLat, eLng),
+        };
+      });
 
       emitTelemetry({
         method: "GET",
@@ -1046,4 +974,424 @@ export const postcode360Api = {
       };
     }
   },
+
+  async listAliases(): Promise<AliasRecord[]> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/v1/aliases`);
+      return await handleResponse<AliasRecord[]>(res);
+    } catch {
+      return [
+        {
+          alias_code: "TP-ABJ-7K2P",
+          alias_name: "Banex Plaza Extension Gate 2",
+          canonical_postcode: "FC-02-A09-DB-09",
+          district: "Wuse II",
+          lat: 9.0758,
+          lng: 7.4904,
+          building_polygon: [
+            [7.4902, 9.0759],
+            [7.4906, 9.0759],
+            [7.4906, 9.0757],
+            [7.4902, 9.0757],
+            [7.4902, 9.0759],
+          ],
+          trust_score: 0.85,
+          delivery_count: 2,
+          is_temp_code: true,
+          verified: false,
+          expires_at: new Date(Date.now() + 88 * 86400000).toISOString(),
+        },
+        {
+          alias_code: "TP-ABJ-3M8X",
+          alias_name: "Maitama Farmers Market Stall 4",
+          canonical_postcode: "FC-01-M04-MA-03",
+          district: "Maitama",
+          lat: 9.0875,
+          lng: 7.4942,
+          building_polygon: [
+            [7.494, 9.0876],
+            [7.4944, 9.0876],
+            [7.4944, 9.0874],
+            [7.494, 9.0874],
+            [7.494, 9.0876],
+          ],
+          trust_score: 0.95,
+          delivery_count: 3,
+          is_temp_code: false,
+          verified: true,
+          expires_at: new Date(Date.now() + 89 * 86400000).toISOString(),
+        },
+      ];
+    }
+  },
+
+  async mintAlias(payload: AliasMintRequest): Promise<AliasRecord> {
+    const d = payload.district || "Wuse II";
+    const randSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
+    const aliasCode = `TP-ABJ-${randSuffix}`;
+    const polygon = [
+      [payload.lng - 0.00015, payload.lat + 0.00012],
+      [payload.lng + 0.00015, payload.lat + 0.00012],
+      [payload.lng + 0.00015, payload.lat - 0.00012],
+      [payload.lng - 0.00015, payload.lat - 0.00012],
+      [payload.lng - 0.00015, payload.lat + 0.00012],
+    ];
+
+    let created: AliasRecord;
+    try {
+      const res = await fetch(`${API_BASE_URL}/v1/alias/mint`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      created = await handleResponse<AliasRecord>(res);
+    } catch {
+      created = {
+        alias_code: aliasCode,
+        alias_name: payload.alias_name,
+        canonical_postcode: payload.canonical_postcode || "FC-02-A09-DB-09",
+        district: d,
+        lat: payload.lat,
+        lng: payload.lng,
+        building_polygon: polygon,
+        trust_score: 0.75,
+        delivery_count: 1,
+        is_temp_code: true,
+        verified: false,
+        expires_at: new Date(Date.now() + 90 * 86400000).toISOString(),
+      };
+    }
+
+    const mockData: PostcodeData = {
+      postcode: created.alias_code,
+      formatted: created.alias_code,
+      state: "Federal Capital Territory",
+      lga: "AMAC",
+      district: created.district,
+      street: created.alias_name,
+      tier1_state: "FC (FCT Abuja)",
+      tier2_sector: "Crowdsourced Community Sector",
+      tier3_unit: created.alias_code,
+      nipost_legacy: "900001",
+      plus_code: "6FX93FGP+TP",
+      building_type: "Crowdsourced Verified Compound",
+      lat: created.lat,
+      lng: created.lng,
+      building_polygon: created.building_polygon || polygon,
+      confidence: created.trust_score,
+      verified: created.verified,
+      is_alias: true,
+    };
+    resolvedSessionCache.set(created.alias_code.toUpperCase(), mockData);
+    ABUJA_MOCK_POSTCODES[created.alias_code.toUpperCase()] = mockData;
+
+    return created;
+  },
+
+  async verifyAlias(
+    aliasCode: string,
+    proofImageUrl?: string,
+  ): Promise<AliasRecord> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/v1/verify`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          alias_code: aliasCode,
+          proof_image_url: proofImageUrl || null,
+        }),
+      });
+      return await handleResponse<AliasRecord>(res);
+    } catch {
+      return {
+        alias_code: aliasCode,
+        alias_name: "Banex Plaza Extension Gate 2",
+        canonical_postcode: "FC-02-A09-DB-09",
+        district: "Wuse II",
+        lat: 9.0758,
+        lng: 7.4904,
+        building_polygon: [
+          [7.4902, 9.0759],
+          [7.4906, 9.0759],
+          [7.4906, 9.0757],
+          [7.4902, 9.0757],
+          [7.4902, 9.0759],
+        ],
+        trust_score: 0.99,
+        delivery_count: 3,
+        is_temp_code: false,
+        verified: true,
+        expires_at: new Date(Date.now() + 90 * 86400000).toISOString(),
+      };
+    }
+  },
+
+  async dispatchOrder(orderId: string, riderId: string, riderName?: string) {
+    orderOverrides.set(orderId, {
+      order_status: "DISPATCHED",
+      assigned_rider: riderName || riderId,
+    });
+    for (const [key, ord] of fallbackOrders.entries()) {
+      if (ord.order_id === orderId) {
+        fallbackOrders.set(key, {
+          ...ord,
+          order_status: "DISPATCHED",
+          assigned_rider: riderName || riderId,
+        });
+      }
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/v1/orders/${orderId}/dispatch`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ rider_id: riderId, rider_name: riderName }),
+      });
+      return await handleResponse<{
+        status: string;
+        order_id: string;
+        order_status: string;
+      }>(res);
+    } catch {
+      return {
+        status: "success",
+        order_id: orderId,
+        order_status: "DISPATCHED",
+      };
+    }
+  },
+
+  async submitPod(
+    orderId: string,
+    payload: PodSubmitRequest,
+  ): Promise<PodSubmitResponse> {
+    orderOverrides.set(orderId, {
+      order_status: "DELIVERED",
+    });
+    for (const [key, ord] of fallbackOrders.entries()) {
+      if (ord.order_id === orderId) {
+        fallbackOrders.set(key, {
+          ...ord,
+          order_status: "DELIVERED",
+        });
+      }
+    }
+    try {
+      const res = await fetch(`${API_BASE_URL}/v1/orders/${orderId}/pod`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return await handleResponse<PodSubmitResponse>(res);
+    } catch {
+      return {
+        status: "success",
+        order_id: orderId,
+        order_status: "DELIVERED",
+        pod_image_url: payload.pod_image_url || "https://images.postcode360.ng/pod/verified.jpg",
+        gps_distance_from_polygon_m: 8.4,
+        gps_verified: true,
+        alias_auto_promoted: false,
+        delivered_at: new Date().toISOString(),
+      };
+    }
+  },
+
+  async listRiders(): Promise<RiderRecord[]> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/v1/riders`);
+      return await handleResponse<RiderRecord[]>(res);
+    } catch {
+      return [
+        {
+          rider_id: "RDR-ABJ-001",
+          rider_name: "Musa Ibrahim (Wuse Rider)",
+          phone: "+2348031122334",
+          lat: 9.0765,
+          lng: 7.4892,
+          is_available: true,
+          battery_pct: 94,
+          updated_at: new Date().toISOString(),
+        },
+        {
+          rider_id: "RDR-ABJ-002",
+          rider_name: "Chinedu Eze (Maitama Courier)",
+          phone: "+2348029988776",
+          lat: 9.0882,
+          lng: 7.4934,
+          is_available: true,
+          battery_pct: 87,
+          updated_at: new Date().toISOString(),
+        },
+      ];
+    }
+  },
+
+  async updateRiderTelemetry(
+    riderId: string,
+    payload: {
+      lat: number;
+      lng: number;
+      is_available: boolean;
+      battery_pct: number;
+    },
+  ) {
+    try {
+      const res = await fetch(`${API_BASE_URL}/v1/riders/${riderId}/telemetry`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      return await handleResponse(res);
+    } catch {
+      return { status: "success", rider_id: riderId, ...payload };
+    }
+  },
+
+  async listIncidents(): Promise<SosIncidentRecord[]> {
+    const res = await fetch(`${API_BASE_URL}/v1/emergency/incidents`);
+    return handleResponse<SosIncidentRecord[]>(res);
+  },
+
+  async triggerSos(payload: SosTriggerRequest): Promise<SosIncidentRecord> {
+    const res = await fetch(`${API_BASE_URL}/v1/emergency/sos`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<SosIncidentRecord>(res);
+  },
+
+  async resolveIncident(incidentId: string): Promise<SosIncidentRecord> {
+    const res = await fetch(
+      `${API_BASE_URL}/v1/emergency/${incidentId}/resolve`,
+      { method: "POST" },
+    );
+    return handleResponse<SosIncidentRecord>(res);
+  },
+
+  async dialUssd(
+    ussdString: string,
+    msisdn = "+2348030001122",
+  ): Promise<UssdDialResponse> {
+    const res = await fetch(`${API_BASE_URL}/v1/ussd`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ussd_string: ussdString, msisdn }),
+    });
+    return handleResponse<UssdDialResponse>(res);
+  },
+
+  async listTilePacks(): Promise<OfflineTilePack[]> {
+    const res = await fetch(`${API_BASE_URL}/v1/tiles/packs`);
+    return handleResponse<OfflineTilePack[]>(res);
+  },
+
+  async syncTilePack(packId: string): Promise<OfflineTilePack> {
+    const res = await fetch(`${API_BASE_URL}/v1/tiles/packs/${packId}/sync`, {
+      method: "POST",
+    });
+    return handleResponse<OfflineTilePack>(res);
+  },
+
+  async getBookmarks(subjectHash: string): Promise<BookmarksResponse> {
+    const params = new URLSearchParams({ subject_hash: subjectHash });
+    const res = await fetch(`${API_BASE_URL}/v1/bookmarks?${params}`);
+    return handleResponse<BookmarksResponse>(res);
+  },
+
+  async saveBookmark(
+    subjectHash: string,
+    postcode: string,
+    label: string,
+  ): Promise<BookmarksResponse> {
+    const res = await fetch(`${API_BASE_URL}/v1/bookmarks`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ subject_hash: subjectHash, postcode, label }),
+    });
+    return handleResponse<BookmarksResponse>(res);
+  },
+
+  async searchPostcodes(query: string): Promise<SearchPostcodeResponse> {
+    const params = new URLSearchParams({ q: query, type: "postcode" });
+    const res = await fetch(`${API_BASE_URL}/v1/search?${params}`);
+    return handleResponse<SearchPostcodeResponse>(res);
+  },
+
+  async getDeliveryProofs(): Promise<DeliveryProofsResponse> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/v1/deliveries/proofs`);
+      return await handleResponse<DeliveryProofsResponse>(res);
+    } catch {
+      return {
+        status: "success",
+        dataset_id: "corridor-delivery-proofs",
+        corridor: "Wuse II & Garki (AMAC, Abuja)",
+        count: 0,
+        proofs: [],
+      };
+    }
+  },
+
+  async getSocialStores(): Promise<SocialStoreRecord[]> {
+    try {
+      const res = await fetch(`${API_BASE_URL}/v1/social-stores`);
+      return await handleResponse<SocialStoreRecord[]>(res);
+    } catch {
+      return [
+        {
+          store_slug: "luxe-atelier-abj",
+          merchant_name: "Luxe Atelier Abuja",
+          merchant_handle: "@luxeatelier.ng",
+          merchant_phone: "+2348039912001",
+          pickup_postcode: "FC-02-A09-DB-09",
+          pickup_location: { lat: 9.0765, lng: 7.4892 },
+          bio_link: "postcode360.ng/store/luxe-atelier-abj",
+          products: [
+            {
+              id: "prod-001",
+              title: '30" Bone Straight Raw Vietnamese Double Drawn',
+              price_ngn: 600000,
+              category: "Hair & Luxury Wigs",
+              description: "Grade 13A raw Vietnamese hair, silky bone straight finish.",
+              image_url: "https://images.unsplash.com/photo-1522337360788-8b13dee7a37e?w=500&auto=format&fit=crop&q=60",
+              stock_count: 8,
+              product_link: "postcode360.ng/pay/luxe-atelier-abj/prod-001",
+            },
+            {
+              id: "prod-002",
+              title: "Artisanal Structured Leather Handbag",
+              price_ngn: 60000,
+              category: "Leather Goods",
+              description: "Handcrafted Italian calf leather with brushed gold hardware.",
+              image_url: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=500&auto=format&fit=crop&q=60",
+              stock_count: 14,
+              product_link: "postcode360.ng/pay/luxe-atelier-abj/prod-002",
+            },
+            {
+              id: "prod-003",
+              title: "Royal Amber Arabian Oud Extrait de Parfum (100ml)",
+              price_ngn: 100000,
+              category: "Fragrances",
+              description: "Smoky Cambodian agarwood infused with taif rose and amber crystal.",
+              image_url: "https://images.unsplash.com/photo-1592945403244-b3fbafd7f539?w=500&auto=format&fit=crop&q=60",
+              stock_count: 22,
+              product_link: "postcode360.ng/pay/luxe-atelier-abj/prod-003",
+            },
+          ],
+        },
+      ];
+    }
+  },
+
+  async createSocialStore(payload: SocialStoreCreateRequest): Promise<SocialStoreRecord> {
+    const res = await fetch(`${API_BASE_URL}/v1/social-stores`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    return handleResponse<SocialStoreRecord>(res);
+  },
+
+
 };

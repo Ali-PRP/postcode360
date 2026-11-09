@@ -5,18 +5,15 @@ import {
   Check,
   Code2,
   SlidersHorizontal,
-  CheckCircle2,
-  Sparkles,
 } from "lucide-react";
-import { postcode360Api } from "../../services/api";
 
 const WOOCOMMERCE_PHP_CODE = `<?php
 /**
- * Plugin Name: FindAm Spatial Postcode Checkout for WooCommerce
+ * Plugin Name: Postcode360 Spatial Postcode Checkout for WooCommerce
  * Plugin URI:  https://github.com/Ali-PRP/postcode360
- * Description: Embeds the FindAm 3-Tier Spatial Postcode Resolution widget into WooCommerce checkout (Abuja Pilot). Zero-PII HMAC-SHA256 verification + PostGIS building polygon resolution.
+ * Description: Embeds the Postcode360 3-Tier Spatial Postcode Resolution widget into WooCommerce checkout (Abuja Pilot). Zero-PII HMAC-SHA256 verification + PostGIS building polygon resolution.
  * Version:     1.2.0
- * Author:      Team A (FindAm / postcode360)
+ * Author:      NovaSync Solutions
  * License:     MIT
  */
 
@@ -24,22 +21,22 @@ if ( ! defined( 'ABSPATH' ) ) {
     exit; // Exit if accessed directly
 }
 
-class FindAm_WooCommerce_Postcode_Checkout {
+class Postcode360_WooCommerce_Postcode_Checkout {
 
     private $api_base_url;
     private $publishable_key;
 
     public function __construct() {
-        $this->api_base_url    = get_option( 'findam_api_base_url', 'http://localhost:8000' );
-        $this->publishable_key = get_option( 'findam_publishable_key', 'pk_test_findam_abuja_01' );
+        $this->api_base_url    = get_option( 'postcode360_api_base_url', 'http://localhost:8000' );
+        $this->publishable_key = get_option( 'postcode360_publishable_key', 'pk_test_postcode360_abuja_01' );
 
-        add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_findam_widget' ) );
-        add_action( 'woocommerce_after_checkout_billing_form', array( $this, 'render_findam_widget_container' ) );
-        add_action( 'woocommerce_checkout_process', array( $this, 'validate_findam_postcode' ) );
-        add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'save_findam_spatial_meta' ) );
+        add_action( 'wp_enqueue_scripts', array( $this, 'enqueue_postcode360_widget' ) );
+        add_action( 'woocommerce_after_checkout_billing_form', array( $this, 'render_postcode360_widget_container' ) );
+        add_action( 'woocommerce_checkout_process', array( $this, 'validate_postcode360_postcode' ) );
+        add_action( 'woocommerce_checkout_update_order_meta', array( $this, 'save_postcode360_spatial_meta' ) );
     }
 
-    public function enqueue_findam_widget() {
+    public function enqueue_postcode360_widget() {
         if ( ! is_checkout() ) {
             return;
         }
@@ -52,14 +49,14 @@ class FindAm_WooCommerce_Postcode_Checkout {
         );
 
         wp_enqueue_script(
-            'findam-widget-sdk',
+            'postcode360-widget-sdk',
             'http://localhost:5173/postcode360-widget.js',
             array( 'jquery' ),
             '1.2.0',
             true
         );
 
-        wp_localize_script( 'findam-widget-sdk', 'FindAmConfig', array(
+        wp_localize_script( 'postcode360-widget-sdk', 'Postcode360Config', array(
             'apiBaseUrl'     => esc_url_raw( $this->api_base_url ),
             'publishableKey' => esc_attr( $this->publishable_key ),
             'origin'         => esc_url_raw( get_site_url() ),
@@ -68,40 +65,40 @@ class FindAm_WooCommerce_Postcode_Checkout {
         ) );
     }
 
-    public function render_findam_widget_container( $checkout ) {
-        echo '<div id="findam-woocommerce-mount" class="findam-checkout-card">';
-        echo '  <h4>' . esc_html__( 'FindAm Spatial Postcode Verification (Abuja)', 'findam' ) . '</h4>';
-        echo '  <p class="findam-privacy-note">Zero-PII HMAC-SHA256 verification • PostGIS Building Footprint</p>';
-        echo '  <div id="findam-widget-root"></div>';
+    public function render_postcode360_widget_container( $checkout ) {
+        echo '<div id="postcode360-woocommerce-mount" class="postcode360-checkout-card">';
+        echo '  <h4>' . esc_html__( 'Postcode360 Spatial Postcode Verification (Abuja)', 'postcode360' ) . '</h4>';
+        echo '  <p class="postcode360-privacy-note">Zero-PII HMAC-SHA256 verification • PostGIS Building Footprint</p>';
+        echo '  <div id="postcode360-widget-root"></div>';
 
-        woocommerce_form_field( 'findam_postcode', array(
+        woocommerce_form_field( 'postcode360_postcode', array(
             'type'        => 'text',
             'class'       => array( 'form-row-wide' ),
-            'label'       => __( 'Resolved FindAm Postcode', 'findam' ),
-            'placeholder' => __( 'FC-02-A09-DB-09', 'findam' ),
+            'label'       => __( 'Resolved Postcode360 Postcode', 'postcode360' ),
+            'placeholder' => __( 'FC-02-A09-DB-09', 'postcode360' ),
             'required'    => true,
-        ), $checkout->get_value( 'findam_postcode' ) );
+        ), $checkout->get_value( 'postcode360_postcode' ) );
 
-        echo '<input type="hidden" name="findam_subject_hash" id="findam_subject_hash" value="" />';
-        echo '<input type="hidden" name="findam_idempotency_key" id="findam_idempotency_key" value="' . esc_attr( wp_generate_uuid4() ) . '" />';
+        echo '<input type="hidden" name="postcode360_subject_hash" id="postcode360_subject_hash" value="" />';
+        echo '<input type="hidden" name="postcode360_idempotency_key" id="postcode360_idempotency_key" value="' . esc_attr( wp_generate_uuid4() ) . '" />';
         echo '</div>';
     }
 
-    public function validate_findam_postcode() {
-        if ( empty( $_POST['findam_postcode'] ) ) {
-            wc_add_notice( __( 'Please verify and resolve your FindAm Spatial Postcode (e.g. FC-02-A09-DB-09) before placing your order.', 'findam' ), 'error' );
+    public function validate_postcode360_postcode() {
+        if ( empty( $_POST['postcode360_postcode'] ) ) {
+            wc_add_notice( __( 'Please verify and resolve your Postcode360 Spatial Postcode (e.g. FC-02-A09-DB-09) before placing your order.', 'postcode360' ), 'error' );
         }
     }
 
-    public function save_findam_spatial_meta( $order_id ) {
-        if ( ! empty( $_POST['findam_postcode'] ) ) {
-            $postcode        = sanitize_text_field( $_POST['findam_postcode'] );
-            $subject_hash    = sanitize_text_field( $_POST['findam_subject_hash'] ?? '' );
-            $idempotency_key = sanitize_text_field( $_POST['findam_idempotency_key'] ?? 'wc-ord-' . $order_id );
+    public function save_postcode360_spatial_meta( $order_id ) {
+        if ( ! empty( $_POST['postcode360_postcode'] ) ) {
+            $postcode        = sanitize_text_field( $_POST['postcode360_postcode'] );
+            $subject_hash    = sanitize_text_field( $_POST['postcode360_subject_hash'] ?? '' );
+            $idempotency_key = sanitize_text_field( $_POST['postcode360_idempotency_key'] ?? 'wc-ord-' . $order_id );
 
-            update_post_meta( $order_id, '_findam_postcode', $postcode );
-            update_post_meta( $order_id, '_findam_subject_hash', $subject_hash );
-            update_post_meta( $order_id, '_findam_idempotency_key', $idempotency_key );
+            update_post_meta( $order_id, '_postcode360_postcode', $postcode );
+            update_post_meta( $order_id, '_postcode360_subject_hash', $subject_hash );
+            update_post_meta( $order_id, '_postcode360_idempotency_key', $idempotency_key );
 
             $order = wc_get_order( $order_id );
             $payload = array(
@@ -125,73 +122,73 @@ class FindAm_WooCommerce_Postcode_Checkout {
     }
 }
 
-new FindAm_WooCommerce_Postcode_Checkout();
+new Postcode360_WooCommerce_Postcode_Checkout();
 `;
 
 const SHOPIFY_LIQUID_CODE = `{% comment %}
   File: extensions/postcode360-checkout/blocks/postcode-widget.liquid
-  Task #6 (Priority 1): Shopify Theme App Extension Block for FindAm / postcode360
+  Shopify Theme App Extension Block for Postcode360
 {% endcomment %}
 
 <div
-  id="findam-shopify-embed-{{ block.id }}"
-  class="findam-shopify-widget-wrapper"
+  id="postcode360-shopify-embed-{{ block.id }}"
+  class="postcode360-shopify-widget-wrapper"
   data-api-base="{{ block.settings.api_base_url | escape }}"
   data-publishable-key="{{ block.settings.publishable_key | escape }}"
   data-force-mock="{{ block.settings.force_mock_sandbox }}"
   data-accent-color="{{ block.settings.accent_color }}"
 >
-  <div class="findam-widget-header">
-    <span class="findam-badge-emerald">FindAm // postcode360</span>
-    <span class="findam-zero-pii-pill">Zero-PII HMAC-SHA256</span>
+  <div class="postcode360-widget-header">
+    <span class="postcode360-badge-emerald">Postcode360</span>
+    <span class="postcode360-zero-pii-pill">Zero-PII HMAC-SHA256</span>
   </div>
 
-  <p class="findam-helper-text">
+  <p class="postcode360-helper-text">
     {{ block.settings.heading_text | default: "Verify your 3-Tier Abuja Postcode for instant rider dispatch" }}
   </p>
 
   <!-- Step 1: Zero-PII Handshake Input -->
-  <div class="findam-field-group">
-    <label for="findam-nin-email-{{ block.id }}">NIN (11 Digits) or Email (Hashed via HMAC-SHA256)</label>
-    <div class="findam-row">
+  <div class="postcode360-field-group">
+    <label for="postcode360-nin-email-{{ block.id }}">NIN (11 Digits) or Email (Hashed via HMAC-SHA256)</label>
+    <div class="postcode360-row">
       <input
         type="text"
-        id="findam-nin-email-{{ block.id }}"
-        placeholder="12345678901 or shopper@findam.ng"
+        id="postcode360-nin-email-{{ block.id }}"
+        placeholder="12345678901 or shopper@postcode360.ng"
         autocomplete="off"
       />
-      <button type="button" id="findam-verify-btn-{{ block.id }}">
+      <button type="button" id="postcode360-verify-btn-{{ block.id }}">
         Verify & Unlock
       </button>
     </div>
   </div>
 
   <!-- Step 2: 3-Tier Spatial Postcode Lookup -->
-  <div class="findam-field-group" id="findam-lookup-panel-{{ block.id }}" style="display:none;">
-    <label for="findam-postcode-input-{{ block.id }}">NIPOST / FindAm 3-Tier Code</label>
-    <div class="findam-row">
+  <div class="postcode360-field-group" id="postcode360-lookup-panel-{{ block.id }}" style="display:none;">
+    <label for="postcode360-postcode-input-{{ block.id }}">NIPOST / Postcode360 3-Tier Code</label>
+    <div class="postcode360-row">
       <input
         type="text"
-        id="findam-postcode-input-{{ block.id }}"
-        name="attributes[findam_postcode]"
+        id="postcode360-postcode-input-{{ block.id }}"
+        name="attributes[postcode360_postcode]"
         placeholder="FC-02-A09-DB-09"
-        value="{{ cart.attributes.findam_postcode }}"
+        value="{{ cart.attributes.postcode360_postcode }}"
       />
-      <button type="button" id="findam-resolve-btn-{{ block.id }}">
+      <button type="button" id="postcode360-resolve-btn-{{ block.id }}">
         Resolve Polygon
       </button>
     </div>
-    <input type="hidden" name="attributes[findam_subject_hash]" id="findam-hash-{{ block.id }}" />
-    <input type="hidden" name="attributes[findam_coordinates]" id="findam-coords-{{ block.id }}" />
+    <input type="hidden" name="attributes[postcode360_subject_hash]" id="postcode360-hash-{{ block.id }}" />
+    <input type="hidden" name="attributes[postcode360_coordinates]" id="postcode360-coords-{{ block.id }}" />
   </div>
 
   <!-- MapLibre GL Building Footprint Canvas -->
-  <div id="findam-maplibre-{{ block.id }}" style="height: 220px; width: 100%; border-radius: 10px; margin-top: 12px;"></div>
+  <div id="postcode360-maplibre-{{ block.id }}" style="height: 220px; width: 100%; border-radius: 10px; margin-top: 12px;"></div>
 </div>
 
 {% schema %}
 {
-  "name": "FindAm Postcode Widget",
+  "name": "Postcode360 Postcode Widget",
   "target": "section",
   "settings": [
     {
@@ -210,7 +207,7 @@ const SHOPIFY_LIQUID_CODE = `{% comment %}
       "type": "text",
       "id": "publishable_key",
       "label": "Merchant Publishable Key",
-      "default": "pk_test_findam_abuja_01"
+      "default": "pk_test_postcode360_abuja_01"
     },
     {
       "type": "checkbox",
@@ -229,9 +226,46 @@ const SHOPIFY_LIQUID_CODE = `{% comment %}
 {% endschema %}
 `;
 
+
+const ENUMERATOR_SDK_CODE = `import { Postcode360Enumerator } from "@postcode360/enumerator-sdk";
+
+// Initialize the Logistics & Crowdsourced Enumerator SDK in rider app
+const enumerator = new Postcode360Enumerator({
+  publishableKey: "pk_test_postcode360_abuja_01",
+  partnerId: "gokada-logistics-abj",
+  offlineSyncRadiusKm: 50,
+  autoPromoteThreshold: 3, // Auto-promotes TP codes after 3 verified deliveries
+});
+
+// 1. Resolve Delivery Rooftop Polygon
+const delivery = await enumerator.resolveRooftop({
+  postcode: "FC-02-A09-DB-09",
+  fallbackGps: { lat: 9.0765, lng: 7.4892 },
+});
+
+// 2. Mint Temporary Postcode (TP-...) for unmapped address
+const newAddress = await enumerator.mintTemporaryCode({
+  aliasName: "Banex Plaza Extension Gate 2",
+  district: "Wuse II",
+  coords: { lat: 9.0758, lng: 7.4904 },
+  proofImageUrl: "https://images.postcode360.ng/pod/banex-gate2.jpg",
+});
+
+// 3. Verify Proof of Delivery (POD) GPS inside rooftop boundary
+const podResult = await enumerator.submitDeliveryProof({
+  orderId: "ord-wuse2-2026-001",
+  riderId: "rider-haruna-01",
+  riderCoords: { lat: 9.0765, lng: 7.4892 },
+  podPhotoUrl: "https://images.postcode360.ng/pod/delivered-42-ademola.jpg",
+});
+
+console.log("GPS Distance from Rooftop:", podResult.gps_distance_from_polygon_m, "meters");
+console.log("Rooftop GPS Verified:", podResult.gps_verified);
+`;
+
 export const PluginTemplates: React.FC = () => {
   const [activePluginTab, setActivePluginTab] = useState<
-    "WOOCOMMERCE" | "SHOPIFY"
+    "WOOCOMMERCE" | "SHOPIFY" | "ENUMERATOR"
   >("WOOCOMMERCE");
   const [copiedCode, setCopiedCode] = useState(false);
   const [shopifyHeading, setShopifyHeading] = useState(
@@ -242,7 +276,9 @@ export const PluginTemplates: React.FC = () => {
   const activeCode =
     activePluginTab === "WOOCOMMERCE"
       ? WOOCOMMERCE_PHP_CODE
-      : SHOPIFY_LIQUID_CODE;
+      : activePluginTab === "SHOPIFY"
+        ? SHOPIFY_LIQUID_CODE
+        : ENUMERATOR_SDK_CODE;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(activeCode);
@@ -253,28 +289,28 @@ export const PluginTemplates: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Top Deliverable Banner */}
-      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-white/10 bg-[#111116] p-5">
+      <div className="flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c1017] p-5">
         <div>
           <div className="flex items-center gap-2">
             <span className="rounded-full border border-violet-500/30 bg-violet-500/15 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-violet-300">
-              DELIVERABLES TASK #5 &amp; TASK #6
+              E-COMMERCE INTEGRATIONS
             </span>
             <span className="font-mono text-xs text-zinc-400">
               Drop-in E-Commerce Integrations
             </span>
           </div>
-          <h1 className="mt-1 text-lg font-bold text-white sm:text-xl">
+          <h1 className="mt-1 text-lg font-bold text-slate-900 dark:text-white sm:text-xl">
             WooCommerce PHP Plugin &amp; Shopify Theme App Extension Liquid
             Block
           </h1>
-          <p className="text-xs text-zinc-400 sm:text-sm">
+          <p className="text-xs text-slate-500 dark:text-zinc-400 sm:text-sm">
             Production-ready plugin deliverables that inject{" "}
-            <code className="text-emerald-300">@findam/widget</code> into
+            <code className="text-emerald-300">@postcode360/widget</code> into
             WordPress/WooCommerce and Shopify checkouts.
           </p>
         </div>
 
-        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#08080A] p-1">
+        <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900 dark:bg-[#08080A] p-1">
           <button
             type="button"
             onClick={() => setActivePluginTab("WOOCOMMERCE")}
@@ -297,27 +333,40 @@ export const PluginTemplates: React.FC = () => {
           >
             extensions/postcode360-checkout/blocks/postcode-widget.liquid
           </button>
+          <button
+            type="button"
+            onClick={() => setActivePluginTab("ENUMERATOR")}
+            className={`rounded-lg px-3.5 py-2 font-mono text-xs font-semibold transition ${
+              activePluginTab === "ENUMERATOR"
+                ? "bg-cyan-500 text-zinc-950"
+                : "text-zinc-400 hover:text-white"
+            }`}
+          >
+            packages/@postcode360-enumerator-sdk/index.ts
+          </button>
         </div>
       </div>
 
       {/* 12-Col Grid: Code Viewer (8 cols) + Shopify Theme Editor Simulator & Checklist (4 cols) */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
         {/* Left 8 Cols: Source Code Inspector */}
-        <div className="flex flex-col overflow-hidden rounded-2xl border border-white/10 bg-[#111116] shadow-xl lg:col-span-8">
-          <div className="flex items-center justify-between border-b border-white/10 bg-[#16161E] px-4 py-3">
-            <div className="flex items-center gap-2 font-mono text-xs text-zinc-200">
+        <div className="flex flex-col overflow-hidden rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c1017] shadow-xl lg:col-span-8">
+          <div className="flex items-center justify-between border-b border-white/10 bg-slate-100 dark:bg-[#16161E] px-4 py-3">
+            <div className="flex items-center gap-2 font-mono text-xs text-slate-800 dark:text-zinc-200">
               <Code2 className="h-4 w-4 text-emerald-400" />
               <span>
                 {activePluginTab === "WOOCOMMERCE"
                   ? "plugins/woocommerce-postcode360/postcode360-checkout.php"
-                  : "extensions/postcode360-checkout/blocks/postcode-widget.liquid"}
+                  : activePluginTab === "SHOPIFY"
+                    ? "extensions/postcode360-checkout/blocks/postcode-widget.liquid"
+                    : "packages/@postcode360-enumerator-sdk/index.ts"}
               </span>
             </div>
 
             <button
               type="button"
               onClick={handleCopy}
-              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-[#08080A] px-3 py-1.5 font-mono text-xs text-emerald-300 transition hover:bg-white/10"
+              className="flex items-center gap-1.5 rounded-lg border border-white/10 bg-slate-900 dark:bg-[#08080A] px-3 py-1.5 font-mono text-xs text-emerald-300 transition hover:bg-white/10"
             >
               {copiedCode ? (
                 <>
@@ -333,7 +382,7 @@ export const PluginTemplates: React.FC = () => {
             </button>
           </div>
 
-          <pre className="max-h-[600px] flex-1 overflow-x-auto overflow-y-auto bg-[#08080A] p-4 font-mono text-xs leading-relaxed text-zinc-300 sm:p-5">
+          <pre className="max-h-[600px] flex-1 overflow-x-auto overflow-y-auto bg-slate-900 dark:bg-[#08080A] p-4 font-mono text-xs leading-relaxed text-zinc-300 sm:p-5">
             <code>{activeCode}</code>
           </pre>
         </div>
@@ -341,9 +390,9 @@ export const PluginTemplates: React.FC = () => {
         {/* Right 4 Cols: Interactive Shopify Theme Editor Simulator & Contract Checklist */}
         <div className="space-y-5 lg:col-span-4">
           {/* Shopify Theme Editor Schema Simulator */}
-          <div className="space-y-4 rounded-2xl border border-white/10 bg-[#111116] p-5">
+          <div className="space-y-4 rounded-2xl border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c1017] p-5">
             <div className="flex items-center justify-between">
-              <h3 className="flex items-center gap-2 text-sm font-bold text-white">
+              <h3 className="flex items-center gap-2 text-sm font-bold text-slate-900 dark:text-white">
                 <SlidersHorizontal className="h-4 w-4 text-emerald-400" />
                 <span>Shopify Theme Editor Simulator</span>
               </h3>
@@ -361,7 +410,7 @@ export const PluginTemplates: React.FC = () => {
                   type="text"
                   value={shopifyHeading}
                   onChange={(e) => setShopifyHeading(e.target.value)}
-                  className="w-full rounded-lg border border-white/10 bg-[#08080A] px-3 py-2 text-white focus:border-emerald-400 focus:outline-none"
+                  className="w-full rounded-lg border border-white/10 bg-slate-900 dark:bg-[#08080A] px-3 py-2 text-white focus:border-emerald-400 focus:outline-none"
                 />
               </div>
 
@@ -388,116 +437,32 @@ export const PluginTemplates: React.FC = () => {
             </div>
 
             {/* Live Embedded Block Preview */}
-            <div className="space-y-3 rounded-xl border border-white/10 bg-[#08080A] p-4">
+            <div className="space-y-3 rounded-xl border border-white/10 bg-slate-900 dark:bg-[#08080A] p-4">
               <div className="flex items-center justify-between">
                 <span
                   className="rounded px-2 py-0.5 font-mono text-[10px] font-bold text-zinc-950"
                   style={{ backgroundColor: shopifyAccent }}
                 >
-                  FindAm // postcode360
+                  Postcode360
                 </span>
                 <span className="font-mono text-[10px] text-zinc-400">
                   Zero-PII HMAC-SHA256
                 </span>
               </div>
-              <p className="text-xs font-medium text-zinc-200">
+              <p className="text-xs font-medium text-slate-800 dark:text-zinc-200">
                 {shopifyHeading}
               </p>
-              <div className="flex items-center justify-between rounded-lg border border-white/10 bg-[#111116] p-2.5 font-mono text-[11px] text-emerald-300">
+              <div className="flex items-center justify-between rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c1017] p-2.5 font-mono text-[11px] text-emerald-300">
                 <span>FC-02-A09-DB-09</span>
                 <span className="text-zinc-400">Wuse II, Abuja</span>
               </div>
-              <div className="rounded-lg border border-white/10 bg-[#111116] p-2 font-mono text-[11px] text-zinc-400">
+              <div className="rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#0c1017] p-2 font-mono text-[11px] text-zinc-400">
                 building_polygon: 7 vertices • TIER_1_REDIS_CACHE
               </div>
             </div>
           </div>
 
-          {/* Team A Contract Verification Checklist */}
-          <div className="space-y-3 rounded-2xl border border-white/10 bg-[#111116] p-5 text-xs">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-white">
-              Team A Contract Verification Checklist
-            </h3>
-            <ul className="space-y-2 text-zinc-300">
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                <span>
-                  <code className="text-emerald-300">
-                    POST /v1/widget/session
-                  </code>{" "}
-                  with Origin header &amp; HMAC-SHA256 subject hash
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                <span>
-                  <code className="text-emerald-300">POST /v1/lookup</code>{" "}
-                  &amp;{" "}
-                  <code className="text-emerald-300">
-                    GET /v1/mock/postcodes
-                  </code>{" "}
-                  (5 Abuja Districts)
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                <span>
-                  <code className="text-emerald-300">POST /orders</code> with{" "}
-                  <code className="text-amber-300">
-                    idempotent_replay: true
-                  </code>{" "}
-                  deduplication
-                </span>
-              </li>
-              <li className="flex items-start gap-2">
-                <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-emerald-400" />
-                <span>
-                  <code className="text-emerald-300">GET /orders</code>,{" "}
-                  <code className="text-cyan-300">GET /riders/nearest</code>{" "}
-                  &amp;{" "}
-                  <code className="text-rose-300">GET /emergency/nearest</code>
-                </span>
-              </li>
-            </ul>
-
-            <div className="space-y-2 border-t border-white/10 pt-3 font-mono text-[11px]">
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Publishable Key</span>
-                <span className="text-emerald-300">
-                  pk_test_findam_abuja_01
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">Origin Header</span>
-                <span className="text-zinc-300">{window.location.origin}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-zinc-500">
-                  Idempotent Replays Blocked
-                </span>
-                <span className="text-amber-300">
-                  {postcode360Api.getReplaysBlockedCount()}
-                </span>
-              </div>
-            </div>
           </div>
-
-          {/* Pitch Ready Callout */}
-          <div className="space-y-2 rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-emerald-500/15 to-teal-500/15 p-4">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-emerald-400" />
-              <h4 className="text-xs font-bold uppercase tracking-wider text-emerald-300">
-                Pitch Ready • Built on Nigeria&apos;s Postcode
-              </h4>
-            </div>
-            <p className="text-xs leading-relaxed text-zinc-300">
-              Team A Frontend Workspace combines the Merchant Checkout &amp;
-              Widget Simulator, Back-Office PostGIS Admin Dashboard, and
-              WooCommerce/Shopify Plugin Inspector with a hybrid FastAPI +
-              PostGIS spatial engine.
-            </p>
-          </div>
-        </div>
       </div>
     </div>
   );
