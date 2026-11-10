@@ -194,6 +194,7 @@ export const AdminDashboard: React.FC = () => {
                   <button
                     key={st}
                     type="button"
+                    data-demo={`admin-filter-${st.toLowerCase()}`}
                     onClick={() => setStatusFilter(st)}
                     className={`flex items-center gap-1.5 rounded-lg border px-2.5 py-1 font-mono text-[11px] font-semibold transition-all ${
                       active
@@ -255,11 +256,12 @@ export const AdminDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800/60 text-xs">
-                  {filteredOrders.map((ord) => {
+                  {filteredOrders.map((ord, idx) => {
                     const isSelected = selectedOrder?.order_id === ord.order_id;
                     return (
                       <tr
                         key={ord.order_id}
+                        data-demo={idx === 0 ? "admin-order-row-0" : undefined}
                         onClick={() => inspectOrder(ord, emergencyType)}
                         className={`cursor-pointer transition-colors ${
                           isSelected
@@ -403,6 +405,7 @@ export const AdminDashboard: React.FC = () => {
                   {selectedOrder && (
                     <button
                       type="button"
+                      data-demo="admin-assign-rider"
                       onClick={() =>
                         handleUpdateOrderStatus(
                           selectedOrder.order_id,
@@ -437,6 +440,7 @@ export const AdminDashboard: React.FC = () => {
                 <button
                   key={type}
                   type="button"
+                  data-demo={`admin-emg-${type.toLowerCase()}`}
                   onClick={() => {
                     setEmergencyType(type);
                     if (selectedOrder) inspectOrder(selectedOrder, type);

@@ -33,6 +33,9 @@ export interface PostcodeMapProps {
   heightClass?: string;
   title?: string;
   theme?: "light" | "dark";
+  isMarkingVertices?: boolean;
+  markedVertices?: number[][];
+  onAddVertex?: (lng: number, lat: number) => void;
 }
 
 const ABUJA_DEFAULT = { lat: 9.0765, lng: 7.4892 };
@@ -175,6 +178,9 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
   heightClass = "h-[440px]",
   title,
   theme = "dark",
+  isMarkingVertices = false,
+  markedVertices = [],
+  onAddVertex,
 }) => {
   const resolvedLat = centerLat ?? lat ?? ABUJA_DEFAULT.lat;
   const resolvedLng = centerLng ?? lng ?? ABUJA_DEFAULT.lng;
@@ -346,6 +352,45 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
       mapRef.current = null;
     };
   }, []);
+
+  // Vertex Marking Click Listener
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (!isMarkingVertices) {
+      map.getCanvas().style.cursor = "";
+      return;
+    }
+
+    map.getCanvas().style.cursor = "crosshair";
+
+    const handleMapClick = (e: maplibregl.MapMouseEvent) => {
+      if (onAddVertex) {
+        onAddVertex(e.lngLat.lng, e.lngLat.lat);
+      }
+    };
+
+    map.on("click", handleMapClick);
+    return () => {
+      map.off("click", handleMapClick);
+      if (map.getCanvas()) {
+        map.getCanvas().style.cursor = "";
+      }
+    };
+  }, [isMarkingVertices, onAddVertex]);
+
+  const screenMarkedVertices = useMemo(() => {
+    const map = mapRef.current;
+    if (!map || !markedVertices || markedVertices.length === 0) return null;
+    void cameraTick;
+    const pts = markedVertices.map(([vLng, vLat], idx) => {
+      const p = map.project([vLng, vLat]);
+      return { x: p.x, y: p.y, lng: vLng, lat: vLat, label: `V${idx + 1}` };
+    });
+    const pointsAttr = pts.map((p) => `${p.x},${p.y}`).join(" ");
+    return { pts, pointsAttr };
+  }, [markedVertices, cameraTick]);
 
   // 2. Toggle Satellite vs Street Map layer visibility
   useEffect(() => {
@@ -691,7 +736,7 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
 
       {/* Map Canvas + Camera-Locked SVG Vector Overlay */}
       <div className="relative overflow-hidden">
-        <div ref={mapContainerRef} className={`w-full ${heightClass}`} />
+        <div ref={mapContainerRef} data-demo="postcode-map-surface" className={`w-full ${heightClass}`} />
 
         {/* Synchronized SVG Layer for Building Polygon Edges (V1..Vn) & Rider/Emergency Connection Lines */}
         <svg className="pointer-events-none absolute inset-0 z-[5] h-full w-full overflow-hidden">
@@ -825,7 +870,73 @@ export const PostcodeMap: React.FC<PostcodeMapProps> = ({
               ))}
             </g>
           )}
+          {/* Marked Building Vertices (Interactive Enumeration) */}
+          {screenMarkedVertices && screenMarkedVertices.pts.length > 0 && (
+            <g data-demo="marked-vertices-svg-group">
+              {screenMarkedVertices.pts.length >= 2 && (
+                <polyline
+                  points={screenMarkedVertices.pointsAttr}
+                  fill="none"
+                  stroke="#f59e0b"
+                  strokeWidth={2.5}
+                  strokeDasharray="4 3"
+                />
+              )}
+              {screenMarkedVertices.pts.length >= 3 && (
+                <polygon
+                  points={screenMarkedVertices.pointsAttr}
+                  fill="rgba(245, 158, 11, 0.22)"
+                  stroke="#10b981"
+                  strokeWidth={2}
+                />
+              )}
+              {screenMarkedVertices.pts.map((v, idx) => (
+                <g key={`marked-v-${idx}`}>
+                  <circle
+                    cx={v.x}
+                    cy={v.y}
+                    r={7}
+                    fill="#f59e0b"
+                    stroke="#ffffff"
+                    strokeWidth={2}
+                    className="animate-pulse"
+                  />
+                  <rect
+                    x={v.x - 12}
+                    y={v.y - 24}
+                    width={24}
+                    height={16}
+                    rx={4}
+                    fill="#08080A"
+                    stroke="#f59e0b"
+                    strokeWidth={1}
+                  />
+                  <text
+                    x={v.x}
+                    y={v.y - 12}
+                    textAnchor="middle"
+                    fill="#f59e0b"
+                    fontSize={10}
+                    fontWeight="bold"
+                    fontFamily="monospace"
+                  >
+                    {v.label}
+                  </text>
+                </g>
+              ))}
+            </g>
+          )}
         </svg>
+
+        {/* Top Vertex Marking Active Banner */}
+        {isMarkingVertices && (
+          <div
+            data-demo="vertex-marking-banner"
+            className="pointer-events-none absolute left-1/2 top-3 z-30 -translate-x-1/2 rounded-full border border-emerald-500/50 bg-[#08080A]/90 px-4 py-1.5 font-mono text-xs font-semibold text-emerald-300 shadow-2xl backdrop-blur-md flex items-center gap-2 animate-pulse"
+          >
+            <span>✏️ Vertex Marking Active: Click rooftop corners on the satellite map to trace building polygon ({(markedVertices || []).length} corners marked)</span>
+          </div>
+        )}
 
         {/* Floating Address & Active Rider Vector Card */}
         <div

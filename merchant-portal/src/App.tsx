@@ -12,6 +12,7 @@ import { AdminDashboard } from "./components/admin/AdminDashboard";
 import { PluginTemplates } from "./components/plugins/PluginTemplates";
 import { RiderDashboard } from "./components/rider/RiderDashboard";
 import { SocialStorefront } from "./components/storefront/SocialStorefront";
+import { DemoPlayerOverlay } from "./components/demo/DemoPlayerOverlay";
 import { postcode360Api } from "./services/api";
 import type {
   LookupResponse,
@@ -97,6 +98,7 @@ export function App() {
               <div className="inline-flex rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-[#111625] p-1 text-xs font-semibold">
                 <button
                   type="button"
+                  data-demo="mode-customer"
                   onClick={() => setCheckoutSubMode("customer")}
                   className={`flex items-center gap-1.5 rounded-lg px-4 py-2 transition ${
                     checkoutSubMode === "customer"
@@ -109,6 +111,7 @@ export function App() {
                 </button>
                 <button
                   type="button"
+                  data-demo="mode-developer"
                   onClick={() => setCheckoutSubMode("developer")}
                   className={`flex items-center gap-1.5 rounded-lg px-4 py-2 transition ${
                     checkoutSubMode === "developer"
@@ -138,6 +141,7 @@ export function App() {
                   setLastOrder(order);
                   setCheckoutRiders(riders);
                 }}
+                onViewAdmin={() => setActiveTab("admin")}
               />
             ) : (
               <div className="space-y-6">
@@ -351,6 +355,7 @@ export function App() {
 
                         <button
                           type="button"
+                          data-demo="dev-track-admin"
                           onClick={() => setActiveTab("admin")}
                           className="rounded-xl bg-cyan-500 px-4 py-2 text-xs font-semibold text-white shadow-sm transition hover:bg-cyan-600"
                         >
@@ -373,6 +378,10 @@ export function App() {
               setCheckoutRiders(riders);
             }}
             onOpenAdmin={() => setActiveTab("admin")}
+            onOpenCheckout={() => {
+              setActiveTab("checkout");
+              setCheckoutSubMode("customer");
+            }}
           />
         )}
 
@@ -392,6 +401,9 @@ export function App() {
           Postcode360 by NovaSync Solutions
         </p>
       </footer>
+
+      {/* 2-Minute Choreographed Pitch & Motion-Graphics Auto-Pilot Overlay */}
+      <DemoPlayerOverlay />
     </div>
   );
 }

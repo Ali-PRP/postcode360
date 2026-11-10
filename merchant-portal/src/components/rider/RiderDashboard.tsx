@@ -19,6 +19,7 @@ import {
   Sparkles,
   Truck,
 } from "lucide-react";
+import confetti from "canvas-confetti";
 import { postcode360Api } from "../../services/api";
 import { PostcodeMap } from "../map/PostcodeMap";
 import type {
@@ -78,6 +79,14 @@ export const RiderDashboard: React.FC = () => {
   const [minting, setMinting] = useState(false);
   const [verifyingCode, setVerifyingCode] = useState<string | null>(null);
   const [telemetrySaved, setTelemetrySaved] = useState(false);
+  const [isMarkingVertices, setIsMarkingVertices] = useState(false);
+  const [markedVertices, setMarkedVertices] = useState<number[][]>([
+    [7.49025, 9.07592],
+    [7.49058, 9.07595],
+    [7.49060, 9.07565],
+    [7.49022, 9.07562],
+  ]);
+  const [mintPodUrl, setMintPodUrl] = useState("https://images.postcode360.ng/pod/tp-gate-and-pod-verified.jpg");
 
   // Phase 2 State: Rescue & USSD *347#
   const [incidents, setIncidents] = useState<SosIncidentRecord[]>([]);
@@ -221,21 +230,45 @@ export const RiderDashboard: React.FC = () => {
     }
   };
 
+  const handleAutoTraceVertices = () => {
+    setIsMarkingVertices(true);
+    setMarkedVertices([]);
+    const corners = [
+      [+(mintLng - 0.00018).toFixed(5), +(mintLat + 0.00014).toFixed(5)],
+      [+(mintLng + 0.00018).toFixed(5), +(mintLat + 0.00015).toFixed(5)],
+      [+(mintLng + 0.00019).toFixed(5), +(mintLat - 0.00014).toFixed(5)],
+      [+(mintLng - 0.00019).toFixed(5), +(mintLat - 0.00015).toFixed(5)],
+    ];
+    corners.forEach((c, idx) => {
+      setTimeout(() => {
+        setMarkedVertices((prev) => [...prev, c]);
+      }, (idx + 1) * 150);
+    });
+  };
+
   const handleMintTpCode = async (e: React.FormEvent) => {
     e.preventDefault();
     setMinting(true);
     try {
+      const closedPolygon =
+        markedVertices.length >= 4
+          ? [...markedVertices, markedVertices[0]]
+          : undefined;
+
       const created = await postcode360Api.mintAlias({
         lat: mintLat,
         lng: mintLng,
         alias_name: aliasName,
         canonical_postcode: canonicalCode,
         district,
-        proof_image_url: "https://images.postcode360.ng/pod/tp-mint-photo.jpg",
+        proof_image_url: mintPodUrl,
+        pod_image_url: mintPodUrl,
+        building_polygon: closedPolygon,
       });
       setAliases((prev) => [created, ...prev]);
       setSelectedAlias(created);
       setSelectedOrder(null);
+      setIsMarkingVertices(false);
     } finally {
       setMinting(false);
     }
@@ -250,6 +283,16 @@ export const RiderDashboard: React.FC = () => {
       );
       if (selectedAlias?.alias_code === updated.alias_code) {
         setSelectedAlias(updated);
+      }
+      if (updated.delivery_count >= 3 || updated.verified) {
+        try {
+          confetti({
+            particleCount: 55,
+            spread: 75,
+            origin: { y: 0.6 },
+            colors: ["#10b981", "#f59e0b", "#06b6d4"],
+          });
+        } catch {}
       }
     } finally {
       setVerifyingCode(null);
@@ -348,6 +391,7 @@ export const RiderDashboard: React.FC = () => {
         <div className="flex flex-wrap items-center gap-1.5 rounded-xl bg-[#08080A] border border-white/10 p-1">
           <button
             type="button"
+            data-demo="dispatch-subtab-rider"
             onClick={() => setSubTab("rider")}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
               subTab === "rider"
@@ -361,6 +405,7 @@ export const RiderDashboard: React.FC = () => {
 
           <button
             type="button"
+            data-demo="dispatch-subtab-rescue"
             onClick={() => setSubTab("rescue")}
             className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition ${
               subTab === "rescue"
@@ -393,6 +438,7 @@ export const RiderDashboard: React.FC = () => {
 
                 <button
                   type="button"
+                  data-demo="rider-sync-fleet"
                   onClick={loadWorkspace}
                   className="flex items-center gap-1.5 rounded-lg bg-[#08080A] border border-white/10 px-3 py-1.5 font-mono text-xs text-zinc-300 hover:border-white/25 hover:text-white transition"
                 >
@@ -468,6 +514,7 @@ export const RiderDashboard: React.FC = () => {
                       )}
                       <button
                         type="button"
+                        data-demo="rider-ping-gps"
                         onClick={handleBroadcastTelemetry}
                         className="rounded-lg bg-cyan-500/15 border border-cyan-500/30 px-3 py-1.5 font-mono text-[11px] text-cyan-300 hover:bg-cyan-500/20 transition"
                       >
@@ -568,6 +615,7 @@ export const RiderDashboard: React.FC = () => {
                       {selectedOrder.order_status === "PENDING" && (
                         <button
                           type="button"
+                          data-demo="rider-accept-dispatch"
                           onClick={() => handleAcceptDispatch(selectedOrder)}
                           className="flex items-center gap-1.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 px-3 py-1.5 text-xs font-bold text-zinc-950 transition"
                         >
@@ -593,6 +641,7 @@ export const RiderDashboard: React.FC = () => {
                         <button
                           type="button"
                           disabled={submittingPod}
+                          data-demo="rider-complete-pod"
                           onClick={handleCompletePod}
                           className="flex items-center gap-1.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 px-3.5 py-2 text-xs font-bold text-zinc-950 transition"
                         >
@@ -729,7 +778,77 @@ export const RiderDashboard: React.FC = () => {
                   </div>
                 </div>
 
+                {/* Interactive Building Vertex & Gate Enumerator Bar */}
+                <div className="space-y-2 pt-1 border-t border-white/5">
+                  <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                    <span>BUILDING VERTICES ({markedVertices.length} CORNERS)</span>
+                    <span className="text-amber-400 font-bold">ROOFTOP ENUMERATION</span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <button
+                      id="btn-toggle-vertex-mark"
+                      data-demo="rider-toggle-vertex-mark"
+                      type="button"
+                      onClick={() => setIsMarkingVertices((prev) => !prev)}
+                      className={`py-2 px-3 rounded-xl border font-mono text-xs font-semibold transition flex items-center justify-center gap-1.5 ${
+                        isMarkingVertices
+                          ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
+                          : "bg-[#08080A] border-white/10 text-zinc-300 hover:border-emerald-500/30 hover:text-white"
+                      }`}
+                    >
+                      <span>✏️ Mark Corners ({markedVertices.length})</span>
+                    </button>
+
+                    <button
+                      id="btn-auto-trace-vertices"
+                      data-demo="rider-trace-vertices"
+                      type="button"
+                      onClick={handleAutoTraceVertices}
+                      className="py-2 px-3 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-300 hover:bg-amber-500/25 font-mono text-xs font-semibold transition flex items-center justify-center gap-1.5"
+                    >
+                      <Sparkles className="h-3.5 w-3.5 text-amber-400" />
+                      <span>⚡ Trace 4 Corners (V1–V4)</span>
+                    </button>
+                  </div>
+
+                  {/* Gate Photo & Proof of Delivery input */}
+                  <div>
+                    <label className="block font-mono text-[10px] text-zinc-400 mb-1">
+                      GATE PHOTO / PROOF OF DELIVERY (POD URL)
+                    </label>
+                    <input
+                      type="text"
+                      value={mintPodUrl}
+                      onChange={(e) => setMintPodUrl(e.target.value)}
+                      className="w-full bg-[#08080A] border border-white/15 rounded-xl px-3 py-1.5 font-mono text-[11px] text-zinc-300 focus:outline-none focus:border-emerald-400"
+                    />
+                  </div>
+
+                  {/* Live Enumeration Summary Pill */}
+                  <div className="rounded-xl bg-[#08080A] border border-white/10 p-2.5 font-mono text-[11px] space-y-1">
+                    <div className="flex items-center justify-between text-zinc-300">
+                      <span className="text-zinc-500">Gate GPS:</span>
+                      <span className="text-cyan-300">[{mintLat.toFixed(4)}°N, {mintLng.toFixed(4)}°E]</span>
+                    </div>
+                    <div className="flex items-center justify-between text-zinc-300">
+                      <span className="text-zinc-500">Marked Polygon:</span>
+                      <span className="text-amber-300 font-semibold">
+                        {markedVertices.length > 0
+                          ? `V1 → ${markedVertices.map((_, i) => `V${i + 1}`).slice(1).join(" → ")} (${markedVertices.length} vertices)`
+                          : "None (Click map or Trace)"}
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between text-zinc-300">
+                      <span className="text-zinc-500">POD &amp; Gate Photo:</span>
+                      <span className="text-emerald-400 font-semibold">Verified ✓</span>
+                    </div>
+                  </div>
+                </div>
+
                 <button
+                  id="btn-submit-mint-tp"
+                  data-demo="rider-mint-tp"
                   type="submit"
                   disabled={minting}
                   className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition"
@@ -757,6 +876,11 @@ export const RiderDashboard: React.FC = () => {
                 selectedAlias ? "postgis_alias_tp" : "rider_nav_polygon"
               }
               heightClass="h-[440px]"
+              isMarkingVertices={isMarkingVertices}
+              markedVertices={markedVertices}
+              onAddVertex={(lng, lat) => {
+                setMarkedVertices((prev) => [...prev, [lng, lat]]);
+              }}
               riders={
                 activeRider
                   ? [
@@ -795,7 +919,7 @@ export const RiderDashboard: React.FC = () => {
               </div>
 
               <div className="space-y-2.5 max-h-64 overflow-y-auto pr-1">
-                {aliases.map((item) => {
+                {aliases.map((item, idx) => {
                   const isSelected =
                     selectedAlias?.alias_code === item.alias_code;
                   const progressPct = Math.min(
@@ -835,6 +959,7 @@ export const RiderDashboard: React.FC = () => {
 
                         <button
                           type="button"
+                          data-demo={idx === 0 ? "rider-verify-tp-0" : undefined}
                           disabled={verifyingCode === item.alias_code}
                           onClick={(e) => {
                             e.stopPropagation();
@@ -981,6 +1106,7 @@ export const RiderDashboard: React.FC = () => {
                 </div>
 
                 <button
+                  data-demo="rescue-trigger-sos"
                   type="submit"
                   disabled={sosLoading}
                   className="w-full py-2.5 px-4 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-500/20 transition"
@@ -1038,6 +1164,7 @@ export const RiderDashboard: React.FC = () => {
                     className="flex-1 bg-[#08080A] border border-white/15 rounded-xl px-3.5 py-2 font-mono text-xs text-cyan-300 focus:outline-none focus:border-cyan-400"
                   />
                   <button
+                    data-demo="rescue-dial-ussd"
                     type="submit"
                     disabled={ussdLoading}
                     className="flex items-center gap-1.5 rounded-xl bg-cyan-500 hover:bg-cyan-400 px-4 py-2 font-mono text-xs font-bold text-zinc-950 transition"
@@ -1111,7 +1238,7 @@ export const RiderDashboard: React.FC = () => {
               </div>
 
               <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
-                {incidents.map((inc) => {
+                {incidents.map((inc, idx) => {
                   const isSelected =
                     selectedIncident?.incident_id === inc.incident_id;
                   return (
@@ -1140,6 +1267,7 @@ export const RiderDashboard: React.FC = () => {
                         {inc.status !== "RESOLVED" ? (
                           <button
                             type="button"
+                            data-demo={idx === 0 ? "rescue-resolve-incident" : undefined}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleResolveIncident(inc.incident_id);

@@ -313,6 +313,7 @@ export const PluginTemplates: React.FC = () => {
         <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-slate-900 dark:bg-[#08080A] p-1">
           <button
             type="button"
+            data-demo="plugin-tab-woo"
             onClick={() => setActivePluginTab("WOOCOMMERCE")}
             className={`rounded-lg px-3.5 py-2 font-mono text-xs font-semibold transition ${
               activePluginTab === "WOOCOMMERCE"
@@ -324,6 +325,7 @@ export const PluginTemplates: React.FC = () => {
           </button>
           <button
             type="button"
+            data-demo="plugin-tab-shopify"
             onClick={() => setActivePluginTab("SHOPIFY")}
             className={`rounded-lg px-3.5 py-2 font-mono text-xs font-semibold transition ${
               activePluginTab === "SHOPIFY"
@@ -335,6 +337,7 @@ export const PluginTemplates: React.FC = () => {
           </button>
           <button
             type="button"
+            data-demo="plugin-tab-enumerator"
             onClick={() => setActivePluginTab("ENUMERATOR")}
             className={`rounded-lg px-3.5 py-2 font-mono text-xs font-semibold transition ${
               activePluginTab === "ENUMERATOR"

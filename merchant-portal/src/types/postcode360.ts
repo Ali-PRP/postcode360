@@ -132,6 +132,8 @@ export interface AliasMintRequest {
   canonical_postcode?: string;
   district?: string;
   proof_image_url?: string;
+  pod_image_url?: string;
+  building_polygon?: number[][];
 }
 
 export interface AliasRecord {

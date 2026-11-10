@@ -1029,13 +1029,22 @@ export const postcode360Api = {
     const d = payload.district || "Wuse II";
     const randSuffix = Math.random().toString(36).substring(2, 6).toUpperCase();
     const aliasCode = `TP-ABJ-${randSuffix}`;
-    const polygon = [
+    let polygon = [
       [payload.lng - 0.00015, payload.lat + 0.00012],
       [payload.lng + 0.00015, payload.lat + 0.00012],
       [payload.lng + 0.00015, payload.lat - 0.00012],
       [payload.lng - 0.00015, payload.lat - 0.00012],
       [payload.lng - 0.00015, payload.lat + 0.00012],
     ];
+    if (payload.building_polygon && payload.building_polygon.length >= 4) {
+      polygon = [...payload.building_polygon];
+      if (
+        polygon[0][0] !== polygon[polygon.length - 1][0] ||
+        polygon[0][1] !== polygon[polygon.length - 1][1]
+      ) {
+        polygon.push(polygon[0]);
+      }
+    }
 
     let created: AliasRecord;
     try {

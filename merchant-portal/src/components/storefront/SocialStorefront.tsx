@@ -24,6 +24,7 @@ import type {
 interface SocialStorefrontProps {
   onOrderCreated?: (order: OrderResponse, riders: NearestItem[]) => void;
   onOpenAdmin?: () => void;
+  onOpenCheckout?: (product?: StorefrontProduct) => void;
 }
 
 const INITIAL_PRODUCTS: StorefrontProduct[] = [
@@ -80,6 +81,7 @@ const INITIAL_PRODUCTS: StorefrontProduct[] = [
 export const SocialStorefront: React.FC<SocialStorefrontProps> = ({
   onOrderCreated,
   onOpenAdmin,
+  onOpenCheckout,
 }) => {
   // Vendor catalog state
   const [products, setProducts] = useState<StorefrontProduct[]>(INITIAL_PRODUCTS);
@@ -237,6 +239,10 @@ export const SocialStorefront: React.FC<SocialStorefrontProps> = ({
   };
 
   const handleLaunchCheckout = (product: StorefrontProduct) => {
+    if (onOpenCheckout) {
+      onOpenCheckout(product);
+      return;
+    }
     setCheckoutProduct(product);
     setCompletedOrder(null);
     setAssignedRider(null);
@@ -309,6 +315,7 @@ export const SocialStorefront: React.FC<SocialStorefrontProps> = ({
         <div className="flex items-center gap-2">
           <button
             type="button"
+            data-demo="store-share-link"
             onClick={() => handleCopyLink(`https://postcode360.ng/store/luxe-atelier-abj`, "store-link")}
             className="flex items-center gap-1.5 rounded-xl border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111625] px-3 py-2 font-mono text-xs text-slate-700 dark:text-zinc-300 transition hover:bg-slate-100 dark:hover:bg-white/10"
           >
@@ -338,7 +345,7 @@ export const SocialStorefront: React.FC<SocialStorefrontProps> = ({
 
       {/* Catalog Grid */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-        {products.map((item) => {
+        {products.map((item, idx) => {
           const productLink = `https://postcode360.ng/store/luxe-atelier-abj`;
           const paymentLink = `https://postcode360.ng/pay/luxe-atelier-abj/${item.id}`;
           const isCopiedProd = copiedLink === `prod-${item.id}`;
@@ -382,6 +389,7 @@ export const SocialStorefront: React.FC<SocialStorefrontProps> = ({
                   <div className="grid grid-cols-2 gap-1.5 font-mono text-[11px]">
                     <button
                       type="button"
+                      data-demo={idx === 0 ? "store-product-link-0" : `store-product-link-${idx}`}
                       onClick={() => handleCopyLink(productLink, `prod-${item.id}`)}
                       className="flex items-center justify-center gap-1 rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111625] py-1.5 text-slate-700 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-white/10"
                       title="Copy shareable product catalog link"
@@ -401,6 +409,7 @@ export const SocialStorefront: React.FC<SocialStorefrontProps> = ({
 
                     <button
                       type="button"
+                      data-demo={idx === 0 ? "store-payment-link-0" : `store-payment-link-${idx}`}
                       onClick={() => handleCopyLink(paymentLink, `pay-${item.id}`)}
                       className="flex items-center justify-center gap-1 rounded-lg border border-emerald-500/30 bg-emerald-500/10 py-1.5 font-semibold text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20"
                       title="Generate direct checkout payment link for bio / WhatsApp"
@@ -422,6 +431,7 @@ export const SocialStorefront: React.FC<SocialStorefrontProps> = ({
                   {/* Primary CTA: Launch Interactive Checkout */}
                   <button
                     type="button"
+                    data-demo={idx === 0 ? "store-open-checkout-0" : `store-open-checkout-${idx}`}
                     onClick={() => handleLaunchCheckout(item)}
                     className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-slate-900 dark:bg-white py-2 text-xs font-semibold text-white dark:text-slate-950 transition hover:bg-slate-800 dark:hover:bg-zinc-200"
                   >

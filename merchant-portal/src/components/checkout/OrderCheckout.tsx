@@ -151,6 +151,7 @@ export const OrderCheckout: React.FC<OrderCheckoutProps> = ({
       <div className="space-y-2.5 pt-1">
         <button
           type="button"
+          data-demo="dev-create-order"
           disabled={loading || !resolvedPostcode}
           onClick={() => submitOrder(idempotencyKey)}
           className="flex w-full items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-4 py-3 text-sm font-bold text-zinc-950 shadow-lg shadow-emerald-500/20 transition hover:from-emerald-400 hover:to-teal-400 disabled:opacity-50"
@@ -163,6 +164,7 @@ export const OrderCheckout: React.FC<OrderCheckoutProps> = ({
 
         <button
           type="button"
+          data-demo="dev-retry-order"
           disabled={loading || !resolvedPostcode}
           onClick={() => submitOrder(idempotencyKey)}
           className="flex w-full items-center justify-center gap-2 rounded-xl border border-amber-500/40 bg-[#08080A] px-4 py-2.5 font-mono text-xs text-amber-300 transition hover:bg-amber-500/10 disabled:opacity-50"

@@ -108,6 +108,7 @@ export const Navbar: React.FC<NavbarProps> = ({
           <nav className="ml-auto flex items-center gap-1 overflow-x-auto rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100/80 dark:bg-[#111625] p-1">
             <button
               type="button"
+              data-demo="tab-checkout"
               onClick={() => handleSwitch("checkout")}
               className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                 activeTab === "checkout"
@@ -121,6 +122,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               type="button"
+              data-demo="tab-storefront"
               onClick={() => handleSwitch("storefront")}
               className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                 activeTab === "storefront"
@@ -134,6 +136,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               type="button"
+              data-demo="tab-admin"
               onClick={() => handleSwitch("admin")}
               className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                 activeTab === "admin"
@@ -158,6 +161,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               type="button"
+              data-demo="tab-dispatch"
               onClick={() => handleSwitch("rider")}
               className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                 activeTab === "rider"
@@ -171,6 +175,7 @@ export const Navbar: React.FC<NavbarProps> = ({
 
             <button
               type="button"
+              data-demo="tab-plugins"
               onClick={() => handleSwitch("plugins")}
               className={`flex items-center gap-1.5 whitespace-nowrap rounded-lg px-3 py-1.5 text-xs font-medium transition-all ${
                 activeTab === "plugins"

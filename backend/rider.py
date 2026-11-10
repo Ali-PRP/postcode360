@@ -146,6 +146,8 @@ class AliasMintRequest(BaseModel):
     canonical_postcode: Optional[str] = Field(default="FC-02-A09-DB-09")
     district: Optional[str] = Field(default="Wuse II")
     proof_image_url: Optional[str] = Field(default="https://images.postcode360.ng/pod/gate-proof.jpg")
+    pod_image_url: Optional[str] = None
+    building_polygon: Optional[List[List[float]]] = None
 
 
 class AliasRecord(BaseModel):
@@ -261,7 +263,13 @@ def mint_temporary_postcode(payload: AliasMintRequest, db: Optional[Session] = D
     suffix = "".join(random.choices(string.ascii_uppercase + string.digits, k=4))
     alias_code = f"TP-ABJ-{suffix}"
     expires_dt = datetime.now(timezone.utc) + timedelta(days=90)
-    polygon = make_parcel_polygon(payload.lat, payload.lng)
+    if payload.building_polygon and len(payload.building_polygon) >= 4:
+        polygon = [list(pt) for pt in payload.building_polygon]
+        if polygon[0] != polygon[-1]:
+            polygon.append(polygon[0])
+    else:
+        polygon = make_parcel_polygon(payload.lat, payload.lng)
+    proof_url = payload.pod_image_url or payload.proof_image_url or "https://images.postcode360.ng/pod/gate-proof.jpg" 
 
     if db is not None:
         try:
@@ -298,7 +306,7 @@ def mint_temporary_postcode(payload: AliasMintRequest, db: Optional[Session] = D
         "district": payload.district or "AMAC",
         "lat": payload.lat,
         "lng": payload.lng,
-        "proof_image_url": payload.proof_image_url,
+        "proof_image_url": proof_url,
         "trust_score": 1,
         "delivery_count": 0,
         "is_temp_code": True,

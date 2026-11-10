@@ -16,6 +16,7 @@ import {
   ShoppingBag,
   Sparkles,
 } from "lucide-react";
+import confetti from "canvas-confetti";
 import { postcode360Api, ABUJA_MOCK_POSTCODES } from "../../services/api";
 import { PostcodeMap } from "../map/PostcodeMap";
 
@@ -42,6 +43,7 @@ export interface CustomerCheckoutWidgetProps {
   cartProducts?: CartProduct[];
   storeName?: string;
   onOrderCompleted?: (order: OrderResponse, riders: NearestItem[]) => void;
+  onViewAdmin?: () => void;
 }
 
 const DEFAULT_CART: CartProduct[] = [
@@ -115,7 +117,9 @@ export const CustomerCheckoutWidget: React.FC<CustomerCheckoutWidgetProps> = ({
   cartProducts = DEFAULT_CART,
   storeName = "Luxe Atelier",
   onOrderCompleted,
+  onViewAdmin,
 }) => {
+  const [syncToast, setSyncToast] = useState(false);
   const [buyerEmail, setBuyerEmail] = useState("buyer@postcode360.ng");
   const [customerName, setCustomerName] = useState("Amina Bello");
   const [customerPhone, setCustomerPhone] = useState("+2348039912001");
@@ -146,6 +150,8 @@ export const CustomerCheckoutWidget: React.FC<CustomerCheckoutWidgetProps> = ({
 
   // Resolve session token for Zero-PII Email Handshake
   const resolveBuyerSession = useCallback(async (email: string) => {
+    setSyncToast(true);
+    setTimeout(() => setSyncToast(false), 2500);
     if (!email || !email.includes("@")) return;
     try {
       if (emailSessionCache.has(email)) {
@@ -250,6 +256,14 @@ export const CustomerCheckoutWidget: React.FC<CustomerCheckoutWidgetProps> = ({
       });
 
       setCompletedOrder(order);
+      try {
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.6 },
+          colors: ["#10b981", "#06b6d4", "#3b82f6", "#f59e0b"],
+        });
+      } catch {}
 
       try {
         const ridersRes = await postcode360Api.getNearestRiders(order.lat, order.lng);
@@ -409,10 +423,11 @@ export const CustomerCheckoutWidget: React.FC<CustomerCheckoutWidgetProps> = ({
                   <div className="absolute inset-y-0 right-1.5 flex items-center">
                     <button
                       type="button"
+                      data-demo="customer-sync-email"
                       onClick={() => resolveBuyerSession(buyerEmail)}
                       className="rounded-lg bg-slate-900 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-slate-800 transition"
                     >
-                      Sync Saved
+                      {syncToast ? "✓ Synced!" : "Sync Saved"}
                     </button>
                   </div>
                 </div>
@@ -420,12 +435,19 @@ export const CustomerCheckoutWidget: React.FC<CustomerCheckoutWidgetProps> = ({
 
               {/* Step 2: Bookmarked Addresses (1-Click Selector) */}
               <div>
+                {syncToast && (
+                  <div className="mb-2 flex items-center gap-1.5 rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-3 py-1.5 font-mono text-[11px] font-semibold text-emerald-700 animate-in fade-in slide-in-from-top-1">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    <span>✓ 3 Saved Postcodes Synced to {buyerEmail}</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between mb-2">
                   <label className="text-xs font-bold text-slate-700">
                     2. Select Delivery Postcode
                   </label>
                   <button
                     type="button"
+                    data-demo="customer-search-toggle"
                     onClick={() => setIsSearchingManual(!isSearchingManual)}
                     className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 hover:text-emerald-700"
                   >
@@ -443,6 +465,7 @@ export const CustomerCheckoutWidget: React.FC<CustomerCheckoutWidgetProps> = ({
                         <button
                           key={bm.id}
                           type="button"
+                          data-demo={bm.id === "bm-1" ? "bookmark-home" : bm.id === "bm-2" ? "bookmark-office" : "bookmark-farm"}
                           onClick={() => handleSelectPostcode(bm.postcode)}
                           className={`relative flex flex-col items-start rounded-xl border p-3 text-left transition ${
                             isSelected
@@ -613,6 +636,7 @@ export const CustomerCheckoutWidget: React.FC<CustomerCheckoutWidgetProps> = ({
               <div className="pt-2">
                 <button
                   type="button"
+                  data-demo="customer-confirm-order"
                   disabled={isSubmitting || !selectedPostcodeCode}
                   onClick={handlePayAndConfirm}
                   className="flex w-full items-center justify-center gap-2 rounded-xl bg-emerald-600 py-3.5 px-4 text-sm font-bold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-500 active:scale-[0.99] disabled:opacity-50"
@@ -685,13 +709,25 @@ export const CustomerCheckoutWidget: React.FC<CustomerCheckoutWidgetProps> = ({
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-2">
+            <div className="flex flex-col sm:flex-row items-center gap-2 pt-2">
               <button
                 type="button"
-                onClick={() => setCompletedOrder(null)}
-                className="w-full rounded-xl bg-slate-900 py-2.5 text-xs font-semibold text-white transition hover:bg-slate-800"
+                data-demo="customer-view-admin"
+                onClick={() => {
+                  setCompletedOrder(null);
+                  if (onViewAdmin) onViewAdmin();
+                }}
+                className="w-full rounded-xl bg-emerald-600 py-2.5 text-xs font-semibold text-white shadow-lg shadow-emerald-600/25 transition hover:bg-emerald-500"
               >
-                Close Receipt
+                View Order in Admin →
+              </button>
+              <button
+                type="button"
+                data-demo="customer-close-receipt"
+                onClick={() => setCompletedOrder(null)}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2.5 text-xs font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Close
               </button>
             </div>
           </div>

@@ -325,6 +325,7 @@ export const PostcodeLookup: React.FC<PostcodeLookupProps> = ({
         <div className="flex items-center gap-2.5">
           <button
             type="button"
+            data-demo="dev-open-drawer"
             onClick={() => setIsDrawerOpen(true)}
             className="flex items-center gap-1.5 rounded-xl border border-emerald-500/40 bg-emerald-500/15 px-3 py-1.5 font-mono text-[11px] font-semibold text-emerald-300 transition hover:bg-emerald-500/25"
           >
@@ -538,6 +539,7 @@ export const PostcodeLookup: React.FC<PostcodeLookupProps> = ({
 
               <button
                 type="button"
+                data-demo="dev-close-drawer"
                 onClick={() => setIsDrawerOpen(false)}
                 className="rounded-lg border border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-[#111625] px-2.5 py-1 font-mono text-xs text-slate-500 dark:text-zinc-400 transition hover:border-white/25 hover:text-white"
               >

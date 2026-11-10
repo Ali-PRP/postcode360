@@ -135,6 +135,7 @@ export const PiiSessionCard: React.FC<PiiSessionCardProps> = ({
 
           <button
             type="submit"
+            data-demo="dev-verify-session"
             disabled={loading}
             className="flex items-center gap-1.5 rounded-xl bg-violet-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-violet-600/25 transition hover:bg-violet-500 disabled:opacity-50"
           >
