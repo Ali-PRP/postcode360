@@ -8,7 +8,6 @@ import {
   Square,
   Eye,
   EyeOff,
-  CheckCircle2,
 } from "lucide-react";
 
 export interface DemoStage {
@@ -17,99 +16,115 @@ export interface DemoStage {
   shortName: string;
   layer: string;
   title: string;
-  description: string;
+  subtitle: string;
   metricBadge: string;
   durationSec: number;
+  archLayerIndex: number; // 0: Shopper/Vendor, 1: Zero-PII, 2: PostGIS, 3: 3PL & Dispatch
 }
+
+export const ARCHITECTURE_LAYERS = [
+  { id: 0, label: "1. Shopper / Vendor" },
+  { id: 1, label: "2. Zero-PII Gateway" },
+  { id: 2, label: "3. NIPOST + PostGIS Engine" },
+  { id: 3, label: "4. 3PL & Emergency Dispatch" },
+];
 
 export const DEMO_STAGES: DemoStage[] = [
   {
     id: 0,
     number: "01",
     shortName: "Checkout",
-    layer: "LAYER 1: CLIENT CHECKOUT SDK & BOOKMARKS",
-    title: "Paystack for Addressing — 1-Click Saved Postcode Checkout",
-    description:
-      "Buyers enter their email once. Postcode360 instantly resolves bookmarked delivery addresses with sub-meter building polygons, eliminating unaddressed cart abandonments.",
-    metricBadge: "GET /v1/bookmarks • 200 OK • 18ms",
-    durationSec: 18,
+    layer: "1-CLICK EMAIL BOOKMARKS & ROOFTOP RESOLUTION",
+    title: "Plug-and-Play Customer Checkout (1-Click Saved Postcodes)",
+    subtitle:
+      "Shoppers never memorize 11-character codes. Entering their email unlocks bookmarked postcodes in 1 click and frames the exact rooftop building polygon on satellite imagery.",
+    metricBadge: "GET /v1/bookmarks • GET /v1/lookup",
+    durationSec: 20,
+    archLayerIndex: 0,
   },
   {
     id: 1,
     number: "02",
     shortName: "Zero-PII",
-    layer: "LAYER 2: ZERO-PII SESSION & NIPOST ENGINE",
-    title: "Cryptographic PII Hashing & Idempotent Spatial Orders",
-    description:
-      "Raw phone numbers and emails are never stored. The widget creates HMAC-SHA256 tokens and resolves the official 5-segment NIPOST spatial hierarchy with idempotent network guarantees.",
-    metricBadge: "POST /v1/orders • X-Idempotency-Key • 0 PII Retained",
+    layer: "ZERO-PII HASHING & IDEMPOTENT DISPATCH",
+    title: "Zero-PII HMAC-SHA256 Security & Idempotent Double-Tap Protection",
+    subtitle:
+      "Raw emails and NINs are never stored (raw_pii_retained: false). Strict idempotency_key locks ensure mobile network retries never double-charge merchants or duplicate orders.",
+    metricBadge: "POST /v1/widget/session • POST /orders (idempotent_replay: true)",
     durationSec: 18,
+    archLayerIndex: 1,
   },
   {
     id: 2,
     number: "03",
     shortName: "Storefront",
-    layer: "LAYER 3: SOCIAL COMMERCE LINK ENGINE",
-    title: "No-Code Bio Link & Direct DM Checkout Links",
-    description:
-      "Social sellers receive a bio catalog link (postcode360.ng/store/{vendor}) and direct WhatsApp payment links (postcode360.ng/pay/{product}) that bridge buyers straight into Postcode360 addressing.",
-    metricBadge: "GET /store/luxe-abuja • 3 Products • Direct DM Checkout",
+    layer: "TWO-LINK SOCIAL STOREFRONT & DIRECT DM PAYMENTS",
+    title: "Social Commerce Storefront (Bio Catalog Link + Direct Payment Links)",
+    subtitle:
+      "Empowers Instagram, TikTok, and WhatsApp vendors without websites to share a product catalog and route buyers directly into Postcode360’s spatial checkout.",
+    metricBadge: "GET /v1/social-stores • Catalog → Checkout Bridge",
     durationSec: 16,
+    archLayerIndex: 0,
   },
   {
     id: 3,
     number: "04",
     shortName: "PostGIS Admin",
-    layer: "LAYER 4: POSTGIS SPATIAL DISPATCH & KNN ROUTING",
-    title: "Rooftop Order Ledger & Sub-Millisecond Rider Matching",
-    description:
-      "Back-office operators visualize incoming orders on an interactive spatial ledger, executing sub-second PostGIS <-> GiST KNN queries to assign the optimal 3PL delivery fleet rider.",
-    metricBadge: "ST_DWithin + ST_Distance_Sphere • 2.4ms • GiST Index",
+    layer: "LIVE ORDER LEDGER & POSTGIS GiST KNN ROUTING",
+    title: "Live Order Ledger & PostGIS GiST KNN Proximity Routing",
+    subtitle:
+      "Matches resolved rooftop polygons to the closest available 3PL courier and emergency responder in milliseconds using PostGIS ST_DWithin and <-> KNN operators.",
+    metricBadge: "GET /orders • GET /riders/nearest (<25ms)",
     durationSec: 14,
+    archLayerIndex: 2,
   },
   {
     id: 4,
     number: "05",
     shortName: "Rider POD",
-    layer: "LAYER 5: 3PL LOGISTICS & FIELD ENUMERATOR PLUGIN",
-    title: "Turn-by-Turn Rooftop Routing & Sub-Meter Proof of Delivery",
-    description:
-      "Couriers receive high-precision rooftop gate coordinates. Upon arrival, the rider logs a GPS heartbeat and captures photographic Proof of Delivery verified against the building threshold.",
-    metricBadge: "POST /v1/rider/pod • 0.8m Gate Offset • Verified Delivery",
+    layer: "3PL COURIER NAVIGATION & SUB-METER PROOF OF DELIVERY",
+    title: "3PL Partner Plugin (@postcode360/enumerator-sdk) & GPS Proof of Delivery",
+    subtitle:
+      "Postcode360 owns zero motorcycles. External logistics fleets embed our plugin for rooftop gate navigation and polygon-verified Proof of Delivery.",
+    metricBadge: "POST /v1/orders/{id}/pod • <5m Gate GPS Accuracy",
     durationSec: 16,
+    archLayerIndex: 3,
   },
   {
     id: 5,
     number: "06",
     shortName: "Vertex Minting",
-    layer: "LAYER 6: CROWDSOURCED POLYGON ENUMERATION & TP-CODE MAINTENANCE",
-    title: "Interactive 4-Corner Vertex Marking & Temporary Postcode Minting",
-    description:
-      "When a 3PL rider arrives at an unmapped location, they mark 4 rooftop corners (V1–V4) on the satellite map, record gate GPS, and mint a 90-day Temporary Postcode (TP-ABJ-XXXX) that auto-promotes after 3 deliveries.",
-    metricBadge: "POST /v1/alias/mint • ST_MakePolygon • 4 Vertices • 90d TTL",
-    durationSec: 22,
+    layer: "CROWDSOURCED TP-CODE MINTING & 3-DELIVERY MAINTENANCE",
+    title: "Crowdsourced TP-Code Minting & Self-Healing 3-Delivery Maintenance",
+    subtitle:
+      "Partner riders mint 90-day Temporary Postcodes (TP-ABJ-XXXX) at unmapped buildings. Every verified delivery increments trust (+1), auto-promoting the code at 3/3 deliveries to feed ground-truth data back to NIPOST.",
+    metricBadge: "POST /v1/alias/mint (90d TTL) → POST /v1/verify (3/3 Auto-Promoted)",
+    durationSec: 18,
+    archLayerIndex: 3,
   },
   {
     id: 6,
     number: "07",
     shortName: "USSD Rescue",
-    layer: "LAYER 7: TELECOM RESCUE ENGINE & OFFLINE USSD",
-    title: "Offline USSD *347# Resolution & Rapid 2G SOS Dispatch",
-    description:
-      "In low-connectivity zones, couriers and citizens dial *347# to resolve addresses offline. In emergencies, 1-click SOS broadcasts location telemetry to FRSC, Police, and Hospital units.",
-    metricBadge: "USSD *347*POSTCODE# • Termii 2G SMS Gateway • 100% Offline",
-    durationSec: 9,
+    layer: "2G GSM OFFLINE USSD *347# & EMERGENCY TRIAGE",
+    title: "Offline Feature-Phone Inclusion (*347# USSD) & 2G Emergency Triage",
+    subtitle:
+      "Citizens without smartphones or mobile data dial *347*postcode# over 2G GSM to resolve addresses or route 112 trauma responders via Termii SMS.",
+    metricBadge: "POST /v1/ussd • POST /v1/emergency/sos",
+    durationSec: 10,
+    archLayerIndex: 3,
   },
   {
     id: 7,
     number: "08",
     shortName: "Plugins",
-    layer: "LAYER 8: DROP-IN E-COMMERCE & LOGISTICS SDKs",
-    title: "Zero-Code WooCommerce, Shopify & 3PL Mobile Integration",
-    description:
-      "Postcode360 drops seamlessly into existing e-commerce stores via WordPress and Shopify plugins, and empowers 3PL courier fleets via the drop-in Enumerator SDK.",
-    metricBadge: "@postcode360/checkout-js • npm i @postcode360/enumerator-sdk",
-    durationSec: 7,
+    layer: "5-MINUTE DROP-IN E-COMMERCE & 3PL SDKs",
+    title: "5-Minute Drop-In Integration for WooCommerce, Shopify & 3PL Apps",
+    subtitle:
+      "Built on Nigeria’s National Postcode. Ready for immediate pilot deployment across e-commerce merchants, social sellers, and logistics fleets.",
+    metricBadge: "@postcode360/checkout-js • @postcode360/enumerator-sdk",
+    durationSec: 8,
+    archLayerIndex: 3,
   },
 ];
 
@@ -120,8 +135,8 @@ export const DemoPlayerOverlay: React.FC = () => {
   const [isBarHidden, setIsBarHidden] = useState<boolean>(false);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [cursorPos, setCursorPos] = useState<{ x: number; y: number }>({
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
+    x: typeof window !== "undefined" ? window.innerWidth / 2 : 500,
+    y: typeof window !== "undefined" ? window.innerHeight / 2 : 300,
   });
   const [cursorVisible, setCursorVisible] = useState<boolean>(false);
   const [cursorLabel, setCursorLabel] = useState<string>("");
@@ -129,26 +144,25 @@ export const DemoPlayerOverlay: React.FC = () => {
   const [demoComplete, setDemoComplete] = useState<boolean>(false);
   const [elapsedSeconds, setElapsedSeconds] = useState<number>(0);
 
-  // References to keep animation loops safe and cancellable
+  // References
   const cursorRef = useRef<{ x: number; y: number }>({
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
+    x: typeof window !== "undefined" ? window.innerWidth / 2 : 500,
+    y: typeof window !== "undefined" ? window.innerHeight / 2 : 300,
   });
   const isPlayingRef = useRef<boolean>(false);
   const isPausedRef = useRef<boolean>(false);
   const abortRef = useRef<boolean>(false);
   const speedRef = useRef<number>(1);
-  const currentStageRef = useRef<number>(0);
   const timelineIdRef = useRef<number>(0);
+  const highlightedElRef = useRef<HTMLElement | null>(null);
 
   isPlayingRef.current = isPlaying;
   isPausedRef.current = isPaused;
   speedRef.current = playbackSpeed;
-  currentStageRef.current = currentStageIdx;
 
   const currentStage = DEMO_STAGES[currentStageIdx] || DEMO_STAGES[0];
 
-  // Helper: wait while respecting pause state, speed, and abort
+  // Helper: wait respecting pause, speed, and cancel
   const wait = useCallback(async (ms: number): Promise<void> => {
     const step = 50;
     let accumulated = 0;
@@ -161,12 +175,11 @@ export const DemoPlayerOverlay: React.FC = () => {
     }
   }, []);
 
-  // Helper: move virtual cursor with GSAP tween
+  // Helper: smooth cursor movement via GSAP
   const moveCursor = useCallback(
-    async (targetX: number, targetY: number, durationSec = 0.6): Promise<void> => {
+    async (targetX: number, targetY: number, durationSec = 0.65): Promise<void> => {
       if (abortRef.current) return;
-      const speed = speedRef.current;
-      const effectiveDuration = Math.max(0.15, durationSec / speed);
+      const effectiveDuration = Math.max(0.15, durationSec / speedRef.current);
 
       return new Promise<void>((resolve) => {
         gsap.to(cursorRef.current, {
@@ -184,10 +197,38 @@ export const DemoPlayerOverlay: React.FC = () => {
     [],
   );
 
-  // Helper: find element, scroll, glide cursor, click, and trigger DOM event
-  const clickTarget = useCallback(
+  // Helper: find element by data-demo, CSS selector, or visible text
+  const findElement = useCallback((textOrSelector: string): HTMLElement | null => {
+    // 1. Try exact [data-demo="..."]
+    let el = document.querySelector(`[data-demo="${textOrSelector}"]`) as HTMLElement;
+    if (el) return el;
+
+    // 2. Try raw selector
+    try {
+      el = document.querySelector(textOrSelector) as HTMLElement;
+      if (el) return el;
+    } catch {}
+
+    // 3. Search visible interactive buttons, inputs, links, pills by text
+    const lower = textOrSelector.toLowerCase();
+    const candidates = Array.from(
+      document.querySelectorAll<HTMLElement>("button, a, input, [role='button'], h3, p, span"),
+    );
+    for (const cand of candidates) {
+      if (cand.offsetParent === null) continue;
+      const text = cand.textContent?.trim().toLowerCase() || "";
+      if (text === lower || text.includes(lower)) {
+        return cand;
+      }
+    }
+
+    return null;
+  }, []);
+
+  // Helper: find, highlight, glide cursor, click, and trigger DOM action
+  const findAndClick = useCallback(
     async (
-      selector: string,
+      textOrSelector: string,
       label: string,
       postDelayMs = 800,
       options?: { customOffset?: { x: number; y: number } },
@@ -197,17 +238,23 @@ export const DemoPlayerOverlay: React.FC = () => {
       setCursorLabel(label);
       setCursorVisible(true);
 
-      // Wait up to 1.5 seconds for target to exist in DOM
+      // Clean up any existing highlight
+      if (highlightedElRef.current) {
+        highlightedElRef.current.classList.remove("demo-target-highlight");
+        highlightedElRef.current = null;
+      }
+
+      // Wait up to 1.5 seconds for element to be present in DOM
       let el: HTMLElement | null = null;
       for (let i = 0; i < 15; i++) {
-        el = document.querySelector(`[data-demo="${selector}"]`) as HTMLElement;
+        el = findElement(textOrSelector);
         if (el) break;
         await wait(100);
         if (abortRef.current) return;
       }
 
       if (!el) {
-        console.warn(`[DemoPlayer] Selector [data-demo="${selector}"] not found.`);
+        console.warn(`[DemoPlayer] Element matching "${textOrSelector}" not found.`);
         return;
       }
 
@@ -218,6 +265,10 @@ export const DemoPlayerOverlay: React.FC = () => {
 
       await wait(300);
       if (abortRef.current) return;
+
+      // Highlight target element with glowing emerald ring
+      el.classList.add("demo-target-highlight");
+      highlightedElRef.current = el;
 
       const rect = el.getBoundingClientRect();
       const targetX = options?.customOffset
@@ -245,25 +296,42 @@ export const DemoPlayerOverlay: React.FC = () => {
         );
         el.click();
       } catch (err) {
-        console.error(`Click failed on [data-demo="${selector}"]`, err);
+        console.error(`Click failed on "${textOrSelector}"`, err);
       }
 
-      await wait(postDelayMs);
+      // Remove highlight after brief delay
+      await wait(Math.min(300, postDelayMs));
+      if (highlightedElRef.current) {
+        highlightedElRef.current.classList.remove("demo-target-highlight");
+        highlightedElRef.current = null;
+      }
+
+      await wait(Math.max(0, postDelayMs - 300));
     },
-    [wait, moveCursor],
+    [wait, moveCursor, findElement],
   );
 
-  // Stage 1 Action Script
+  // Clean up highlights on unmount
+  useEffect(() => {
+    return () => {
+      if (highlightedElRef.current) {
+        highlightedElRef.current.classList.remove("demo-target-highlight");
+      }
+    };
+  }, []);
+
+  // STAGE 1 (0:00 – 0:20): Customer Checkout: 1-Click Saved Postcodes
   const runStage1 = useCallback(async () => {
     setCurrentStageIdx(0);
-    await clickTarget("tab-checkout", "Opening Spatial Checkout...", 500);
-    await clickTarget("mode-customer", "Activating Crisp White Customer Checkout...", 500);
-    await clickTarget("customer-sync-email", "Syncing Saved Postcodes for buyer@gmail.com...", 800);
-    await clickTarget("bookmark-office", "Resolving Maitama Office Postcode & Rooftop Polygon...", 1000);
-    await clickTarget("bookmark-home", "Resolving Wuse II Home Postcode & Rooftop Polygon...", 1000);
-    await clickTarget("customer-confirm-order", "Submitting Order & Discarding PII...", 1200);
+    await findAndClick("tab-checkout", "Opening Spatial Checkout...", 500);
+    await findAndClick("mode-customer", "Activating Crisp White Customer Checkout...", 500);
+    await findAndClick("customer-sync-email", "Syncing Saved Postcodes for buyer@gmail.com...", 800);
+    await findAndClick("bookmark-office", "Resolving Office (CBD) Postcode & Rooftop Polygon...", 1000);
+    await findAndClick("bookmark-home", "Resolving Home (Wuse II) Postcode & Rooftop Polygon...", 1000);
+    await findAndClick("customer-search-toggle", "Inspecting Preloaded Directory...", 800);
+    await findAndClick("customer-search-toggle", "Closing Preloaded Directory...", 600);
+    await findAndClick("customer-confirm-order", "Submitting Order & Discarding PII...", 1200);
 
-    // Subtle celebration confetti on order confirmation
     try {
       confetti({
         particleCount: 50,
@@ -274,55 +342,54 @@ export const DemoPlayerOverlay: React.FC = () => {
     } catch {}
 
     await wait(1400);
-    await clickTarget("customer-close-receipt", "Closing Order Confirmation Receipt...", 500);
-  }, [clickTarget, wait]);
+    await findAndClick("customer-close-receipt", "Closing Order Confirmation Receipt...", 500);
+  }, [findAndClick, wait]);
 
-  // Stage 2 Action Script
+  // STAGE 2 (0:20 – 0:38): Developer Mode: Zero-PII Hashing & Idempotency
   const runStage2 = useCallback(async () => {
     setCurrentStageIdx(1);
-    await clickTarget("mode-developer", "Switching to Developer Mode Inspector...", 600);
-    await clickTarget("dev-verify-session", "Verifying HMAC-SHA256 Cryptographic Session...", 900);
-    await clickTarget("dev-open-drawer", "Inspecting Preloaded 5-Segment Postcodes...", 1000);
-    await clickTarget("dev-close-drawer", "Closing Directory Drawer...", 600);
-    await clickTarget("dev-create-order", "Dispatching Idempotent Spatial Order...", 1200);
-    await clickTarget("dev-retry-order", "Simulating Network Double-Tap (Idempotent Replay)...", 1400);
-  }, [clickTarget]);
+    await findAndClick("mode-developer", "Switching to Developer Mode Inspector...", 600);
+    await findAndClick("dev-verify-session", "Verifying HMAC-SHA256 Cryptographic Session...", 900);
+    await findAndClick("dev-open-drawer", "Inspecting 5-Segment NIPOST Hierarchy...", 1000);
+    await findAndClick("dev-close-drawer", "Closing Directory Drawer...", 600);
+    await findAndClick("dev-create-order", "Dispatching Idempotent Spatial Order...", 1200);
+    await findAndClick("dev-retry-order", "Simulating Network Double-Tap (Idempotent Replay)...", 1400);
+  }, [findAndClick]);
 
-  // Stage 3 Action Script
+  // STAGE 3 (0:38 – 0:54): Storefront: Two-Link Catalog for Social Sellers
   const runStage3 = useCallback(async () => {
     setCurrentStageIdx(2);
-    await clickTarget("tab-storefront", "Opening Social Media Vendor Storefront...", 600);
-    await clickTarget("store-share-link", "Copying Storefront Bio Link (postcode360.ng/store/luxe-abuja)...", 900);
-    await clickTarget("store-product-link-0", "Copying Direct Product Link (Bone Straight Wig)...", 900);
-    await clickTarget("store-payment-link-0", "Copying Direct WhatsApp Payment Link...", 900);
-    await clickTarget("store-open-checkout-0", "Bridging Buyer from Social Link to Checkout...", 1200);
-  }, [clickTarget]);
+    await findAndClick("tab-storefront", "Opening Social Media Vendor Storefront...", 600);
+    await findAndClick("store-share-link", "Copying Storefront Bio Link (postcode360.ng/store/luxe-abuja)...", 900);
+    await findAndClick("store-product-link-0", "Copying Direct Product Link (Bone Straight Wig)...", 900);
+    await findAndClick("store-payment-link-0", "Copying Direct WhatsApp Payment Link...", 900);
+    await findAndClick("store-open-checkout-0", "Bridging Buyer from Social Link to Checkout...", 1200);
+  }, [findAndClick]);
 
-  // Stage 4 Action Script
+  // STAGE 4 (0:54 – 1:08): Admin: Live Order Ledger & PostGIS GiST KNN
   const runStage4 = useCallback(async () => {
     setCurrentStageIdx(3);
-    await clickTarget("tab-admin", "Navigating to Back-Office Admin...", 600);
-    await clickTarget("admin-order-row-0", "Inspecting Incoming Spatial Order...", 1000);
-    await clickTarget("admin-assign-rider", "Executing PostGIS GiST KNN Rider Match...", 1200);
-  }, [clickTarget]);
+    await findAndClick("tab-admin", "Navigating to Back-Office Admin...", 600);
+    await findAndClick("admin-order-row-0", "Inspecting Incoming Spatial Order...", 1000);
+    await findAndClick("admin-assign-rider", "Executing PostGIS GiST KNN Rider Match...", 1200);
+  }, [findAndClick]);
 
-  // Stage 5 Action Script
+  // STAGE 5 (1:08 – 1:24): Dispatch Hub: 3PL Courier Navigation & POD
   const runStage5 = useCallback(async () => {
     setCurrentStageIdx(4);
-    await clickTarget("tab-dispatch", "Entering 3PL Dispatch Hub & Rider Fleet...", 600);
-    await clickTarget("dispatch-subtab-rider", "Activating Courier & Field Enumerator Mode...", 600);
-    await clickTarget("rider-ping-gps", "Sending Live High-Precision GPS Heartbeat...", 900);
-    await clickTarget("rider-complete-pod", "Capturing Gate Proof of Delivery (0.8m offset)...", 1400);
-  }, [clickTarget]);
+    await findAndClick("tab-dispatch", "Entering 3PL Dispatch Hub & Rider Fleet...", 600);
+    await findAndClick("dispatch-subtab-rider", "Activating Courier & Field Enumerator Mode...", 600);
+    await findAndClick("rider-ping-gps", "Sending Live High-Precision GPS Heartbeat...", 900);
+    await findAndClick("rider-complete-pod", "Capturing Gate Proof of Delivery (4.99m offset)...", 1400);
+  }, [findAndClick]);
 
-  // Stage 6 Action Script (Interactive Vertex Marking & 3-Delivery Auto-Promotion)
+  // STAGE 6 (1:24 – 1:42): Crowdsourced TP-Code Minting & 3-Delivery Promotion
   const runStage6 = useCallback(async () => {
     setCurrentStageIdx(5);
 
-    // Click trace 4 rooftop corners button
-    await clickTarget("rider-trace-vertices", "Tracing 4 Rooftop Corners (V1–V4)...", 400);
+    await findAndClick("rider-trace-vertices", "Tracing 4 Rooftop Corners (V1–V4)...", 400);
 
-    // Animate virtual cursor gliding across rooftop corners on the map canvas
+    // Smooth rooftop polygon cursor tracing across satellite canvas
     const mapSurface = document.querySelector('[data-demo="postcode-map-surface"]');
     if (mapSurface) {
       const mapRect = mapSurface.getBoundingClientRect();
@@ -355,15 +422,13 @@ export const DemoPlayerOverlay: React.FC = () => {
       setIsClicking(false);
     }
 
-    // Mint Temporary Postcode
-    await clickTarget("rider-mint-tp", "Minting Temporary Postcode (TP-ABJ-XXXX)...", 1200);
+    await findAndClick("rider-mint-tp", "Minting Temporary Postcode (TP-ABJ-XXXX)...", 1200);
 
     // 3 verified deliveries to promote
-    await clickTarget("rider-verify-tp-0", "Logging 1st Verified Delivery (1/3)...", 900);
-    await clickTarget("rider-verify-tp-0", "Logging 2nd Verified Delivery (2/3)...", 900);
-    await clickTarget("rider-verify-tp-0", "Logging 3rd Verified Delivery (3/3 - Auto-Promote!)...", 1200);
+    await findAndClick("rider-verify-tp-0", "Logging 1st Verified Delivery (1/3)...", 900);
+    await findAndClick("rider-verify-tp-0", "Logging 2nd Verified Delivery (2/3)...", 900);
+    await findAndClick("rider-verify-tp-0", "Logging 3rd Verified Delivery (3/3 - Auto-Promote!)...", 1200);
 
-    // Celebratory confetti on TP-Code auto-promotion
     try {
       confetti({
         particleCount: 80,
@@ -374,29 +439,29 @@ export const DemoPlayerOverlay: React.FC = () => {
     } catch {}
 
     await wait(800);
-  }, [clickTarget, moveCursor, wait]);
+  }, [findAndClick, moveCursor, wait]);
 
-  // Stage 7 Action Script
+  // STAGE 7 (1:42 – 1:52): Emergency SOS & Offline USSD *347#
   const runStage7 = useCallback(async () => {
     setCurrentStageIdx(6);
-    await clickTarget("dispatch-subtab-rescue", "Opening Offline USSD & Emergency Rescue Dispatch...", 600);
-    await clickTarget("rescue-trigger-sos", "Triggering 2G SMS SOS to FRSC & Police Units...", 1100);
-    await clickTarget("rescue-dial-ussd", "Simulating Offline USSD *347# Session...", 1100);
-    await clickTarget("rescue-resolve-incident", "Resolving Incident & Incrementing Trust Score...", 1000);
-  }, [clickTarget]);
+    await findAndClick("dispatch-subtab-rescue", "Opening Offline USSD & Emergency Rescue Dispatch...", 600);
+    await findAndClick("rescue-trigger-sos", "Triggering 2G SMS SOS to FRSC & Police Units...", 1100);
+    await findAndClick("rescue-dial-ussd", "Simulating Offline USSD *347# Session...", 1100);
+    await findAndClick("rescue-resolve-incident", "Resolving Incident & Incrementing Trust Score...", 1000);
+  }, [findAndClick]);
 
-  // Stage 8 Action Script
+  // STAGE 8 (1:52 – 2:00): Drop-In Plugins (WooCommerce & Shopify)
   const runStage8 = useCallback(async () => {
     setCurrentStageIdx(7);
-    await clickTarget("tab-plugins", "Opening Drop-In Plugins & Integrations...", 600);
-    await clickTarget("plugin-tab-woo", "Inspecting WooCommerce PHP Plugin...", 800);
-    await clickTarget("plugin-tab-shopify", "Inspecting Shopify Liquid Checkout Integration...", 800);
-    await clickTarget("plugin-tab-enumerator", "Inspecting 3PL Courier Mobile Enumerator SDK...", 900);
-    await clickTarget("tab-checkout", "Returning to Customer Checkout for Hero Summary...", 1000);
-    await clickTarget("mode-customer", "Checkout Ready for Customers...", 600);
-  }, [clickTarget]);
+    await findAndClick("tab-plugins", "Opening Drop-In Plugins & Integrations...", 600);
+    await findAndClick("plugin-tab-woo", "Inspecting WooCommerce PHP Plugin...", 800);
+    await findAndClick("plugin-tab-shopify", "Inspecting Shopify Liquid Checkout Integration...", 800);
+    await findAndClick("plugin-tab-enumerator", "Inspecting 3PL Courier Mobile Enumerator SDK...", 900);
+    await findAndClick("tab-checkout", "Returning to Customer Checkout for Final Closing Frame...", 1000);
+    await findAndClick("mode-customer", "Ready for E-Commerce Customers...", 600);
+  }, [findAndClick]);
 
-  // Master demo runner
+  // Master demo orchestrator
   const startDemoFromStage = useCallback(
     async (startIdx: number) => {
       abortRef.current = false;
@@ -450,16 +515,16 @@ export const DemoPlayerOverlay: React.FC = () => {
   };
 
   const handlePauseResume = () => {
-    if (isPaused) {
-      setIsPaused(false);
-    } else {
-      setIsPaused(true);
-    }
+    setIsPaused((prev) => !prev);
   };
 
   const handleStop = () => {
     abortRef.current = true;
     timelineIdRef.current = 0;
+    if (highlightedElRef.current) {
+      highlightedElRef.current.classList.remove("demo-target-highlight");
+      highlightedElRef.current = null;
+    }
     setIsPlaying(false);
     setIsPaused(false);
     setCursorVisible(false);
@@ -484,7 +549,6 @@ export const DemoPlayerOverlay: React.FC = () => {
   // Keyboard shortcut listeners: Space, R, H
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input or textarea
       const target = e.target as HTMLElement;
       if (
         target.tagName === "INPUT" ||
@@ -538,19 +602,29 @@ export const DemoPlayerOverlay: React.FC = () => {
 
   return (
     <>
-      {/* 1. Glowing Animated Virtual Cursor & Click Ripple */}
+      {/* Global CSS for targeted element glowing outline */}
+      <style>{`
+        .demo-target-highlight {
+          outline: 2px solid #10b981 !important;
+          outline-offset: 3px !important;
+          box-shadow: 0 0 20px rgba(16, 185, 129, 0.45) !important;
+          transition: all 0.3s cubic-bezier(0.22, 1, 0.36, 1) !important;
+        }
+      `}</style>
+
+      {/* Layer A — High-Visibility Virtual Cursor & Click Ripple */}
       {cursorVisible && (
         <div
           className="pointer-events-none fixed z-[9999] transition-transform duration-75"
           style={{
             left: `${cursorPos.x}px`,
             top: `${cursorPos.y}px`,
-            transform: `translate(-2px, -2px) scale(${isClicking ? 0.8 : 1})`,
+            transform: `translate(-3px, -3px) scale(${isClicking ? 0.8 : 1})`,
           }}
         >
-          {/* Custom SVG Cursor Arrow */}
+          {/* Custom SVG Cursor with Emerald/Cyan Outer Glow */}
           <svg
-            className="h-7 w-7 drop-shadow-[0_4px_12px_rgba(16,185,129,0.6)]"
+            className="h-8 w-8 drop-shadow-[0_4px_14px_rgba(16,185,129,0.7)]"
             viewBox="0 0 24 24"
             fill="none"
             xmlns="http://www.w3.org/2000/svg"
@@ -563,16 +637,17 @@ export const DemoPlayerOverlay: React.FC = () => {
               strokeLinecap="round"
               strokeLinejoin="round"
             />
+            <circle cx="4" cy="4" r="2" fill="#06B6D4" />
           </svg>
 
-          {/* Click Ripple Ping */}
+          {/* Click Ripple Expanding Ping */}
           {isClicking && (
-            <div className="absolute -left-3 -top-3 h-10 w-10 animate-ping rounded-full border-2 border-emerald-400 bg-emerald-400/30 pointer-events-none" />
+            <div className="absolute -left-3 -top-3 h-12 w-12 animate-ping rounded-full border-2 border-emerald-400 bg-emerald-400/30 pointer-events-none" />
           )}
 
           {/* Action Tooltip Beside Cursor */}
           {cursorLabel && (
-            <div className="absolute left-6 top-0 pointer-events-none whitespace-nowrap rounded-lg border border-emerald-500/40 bg-slate-950/90 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 shadow-2xl backdrop-blur-md">
+            <div className="absolute left-7 top-1 pointer-events-none whitespace-nowrap rounded-lg border border-emerald-500/40 bg-[#08080A]/95 px-2.5 py-1 text-[11px] font-semibold text-emerald-300 shadow-2xl backdrop-blur-md">
               <span className="mr-1.5 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
               {cursorLabel}
             </div>
@@ -580,37 +655,39 @@ export const DemoPlayerOverlay: React.FC = () => {
         </div>
       )}
 
-      {/* 2. Top-Center System Architecture Progress Stepper */}
-      <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[9985] hidden xl:flex items-center gap-1.5 rounded-full border border-slate-300/60 dark:border-white/10 bg-white/95 dark:bg-slate-900/95 px-3 py-1.5 shadow-2xl backdrop-blur-md transition-all">
-        {DEMO_STAGES.map((st, idx) => {
-          const isActive = idx === currentStageIdx && isPlaying;
-          const isDone = idx < currentStageIdx;
+      {/* Layer C — Animated Architecture Flow Pill (Top-Center HUD) */}
+      <div className="fixed top-16 left-1/2 -translate-x-1/2 z-[9985] hidden md:flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-[#08080A]/95 px-4 py-2 shadow-2xl backdrop-blur-xl text-xs font-semibold text-zinc-300">
+        {ARCHITECTURE_LAYERS.map((layer, idx) => {
+          const isActive = currentStage.archLayerIndex === idx && isPlaying;
 
           return (
-            <button
-              key={st.id}
-              type="button"
-              onClick={() => handleJumpStage(idx)}
-              className={`flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-semibold transition-all ${
-                isActive
-                  ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/30 ring-2 ring-emerald-400/50"
-                  : isDone
-                  ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 hover:bg-emerald-200"
-                  : "text-slate-500 dark:text-zinc-400 hover:bg-slate-100 dark:hover:bg-white/5"
-              }`}
-            >
-              <span className="font-mono text-[10px] opacity-80">{st.number}</span>
-              <span>{st.shortName}</span>
-              {isDone && <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />}
-            </button>
+            <React.Fragment key={layer.id}>
+              <div
+                className={`flex items-center gap-1.5 rounded-full px-3 py-1 transition-all duration-300 ${
+                  isActive
+                    ? "bg-emerald-500/20 text-emerald-300 border border-emerald-400/50 shadow-[0_0_15px_rgba(16,185,129,0.3)] ring-1 ring-emerald-400"
+                    : "text-zinc-500 hover:text-zinc-300"
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    isActive ? "bg-emerald-400 animate-pulse" : "bg-zinc-600"
+                  }`}
+                />
+                <span>{layer.label}</span>
+              </div>
+              {idx < ARCHITECTURE_LAYERS.length - 1 && (
+                <span className="text-zinc-600 font-mono text-xs">➔</span>
+              )}
+            </React.Fragment>
           );
         })}
       </div>
 
-      {/* 3. Cinema Lower-Third Motion Graphic Callout Card */}
+      {/* Layer B — Cinema Lower-Third Motion Graphic Banner */}
       {(isPlaying || demoComplete) && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9990] w-full max-w-3xl px-4 pointer-events-none transition-all duration-300">
-          <div className="pointer-events-auto overflow-hidden rounded-2xl border border-white/15 bg-slate-950/90 p-4 shadow-[0_25px_60px_-15px_rgba(0,0,0,0.7)] backdrop-blur-xl text-white">
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[9990] w-[92%] max-w-4xl px-2 pointer-events-none transition-all duration-300">
+          <div className="pointer-events-auto overflow-hidden rounded-2xl border border-emerald-500/35 bg-[#08080A]/92 p-4 shadow-[0_20px_60px_rgba(0,0,0,0.75)] backdrop-blur-xl text-white">
             <div className="flex flex-wrap items-center justify-between gap-2 border-b border-white/10 pb-2.5">
               <div className="flex items-center gap-2">
                 <span className="rounded-md bg-emerald-500/20 px-2 py-0.5 font-mono text-[11px] font-bold text-emerald-400 border border-emerald-500/30">
@@ -632,7 +709,7 @@ export const DemoPlayerOverlay: React.FC = () => {
                 {currentStage.title}
               </h3>
               <p className="mt-1 text-xs text-zinc-300 leading-relaxed font-normal">
-                {currentStage.description}
+                {currentStage.subtitle}
               </p>
             </div>
 
@@ -652,19 +729,43 @@ export const DemoPlayerOverlay: React.FC = () => {
         </div>
       )}
 
-      {/* 4. Floating Demo Controller (Bottom-Left) */}
+      {/* Layer D — 120-Second Timeline Progress Bar Along Bottom Edge */}
+      <div className="fixed bottom-0 left-0 right-0 h-[3px] bg-slate-900/60 z-[10000] overflow-hidden">
+        <div
+          className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 transition-all duration-150 ease-linear shadow-[0_0_8px_rgba(16,185,129,0.8)]"
+          style={{ width: `${(elapsedSeconds / 120) * 100}%` }}
+        />
+        {/* Proportional Chapter Markers */}
+        {DEMO_STAGES.map((st, idx) => {
+          let accumSec = 0;
+          for (let i = 0; i < idx; i++) accumSec += DEMO_STAGES[i].durationSec;
+          const leftPercent = (accumSec / 120) * 100;
+
+          return (
+            <div
+              key={st.id}
+              title={`Jump to Stage ${st.number}: ${st.shortName}`}
+              onClick={() => handleJumpStage(idx)}
+              className="absolute top-0 bottom-0 w-[2px] bg-white/20 hover:bg-emerald-400 cursor-pointer pointer-events-auto transition-colors"
+              style={{ left: `${leftPercent}%` }}
+            />
+          );
+        })}
+      </div>
+
+      {/* Discrete Trigger & Floating Controller (Bottom-Left) */}
       <div className="fixed bottom-6 left-6 z-[9995]">
         {isBarHidden ? (
           <button
             type="button"
             onClick={() => setIsBarHidden(false)}
-            className="flex items-center gap-2 rounded-full border border-emerald-500/40 bg-slate-950/90 px-3 py-1.5 text-xs font-semibold text-emerald-400 shadow-xl backdrop-blur-md transition hover:bg-slate-900"
+            className="flex items-center gap-2 rounded-full border border-emerald-500/40 bg-[#08080A]/95 px-3 py-1.5 text-xs font-semibold text-emerald-400 shadow-xl backdrop-blur-md transition hover:bg-slate-900"
           >
             <Eye className="h-3.5 w-3.5" />
             <span>Show Demo Controls [H]</span>
           </button>
         ) : (
-          <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/95 dark:bg-slate-950/95 p-3 shadow-2xl backdrop-blur-xl">
+          <div className="flex flex-col gap-2 rounded-2xl border border-slate-200 dark:border-white/10 bg-white/95 dark:bg-[#08080A]/95 p-3 shadow-2xl backdrop-blur-xl">
             <div className="flex items-center gap-2">
               {!isPlaying ? (
                 <button
@@ -673,7 +774,7 @@ export const DemoPlayerOverlay: React.FC = () => {
                   className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-emerald-500 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-600/30 transition hover:from-emerald-500 hover:to-teal-500"
                 >
                   <Play className="h-4 w-4 fill-white" />
-                  <span>🎬 Start 2-Min Pitch Demo</span>
+                  <span>🎬 2-Min Auto Demo</span>
                 </button>
               ) : (
                 <>
@@ -706,7 +807,7 @@ export const DemoPlayerOverlay: React.FC = () => {
                 </>
               )}
 
-              {/* Speed Controller */}
+              {/* Playback Speed Controller */}
               <div className="flex items-center rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/5 p-0.5 text-[11px] font-semibold">
                 {[1, 1.5, 2].map((spd) => (
                   <button
@@ -728,14 +829,14 @@ export const DemoPlayerOverlay: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setIsBarHidden(true)}
-                title="Hide bar for screen recording (Press H to restore)"
+                title="Hide controls for screen recording (Press H to restore)"
                 className="flex items-center justify-center rounded-xl border border-slate-200 dark:border-white/10 bg-slate-100 dark:bg-white/10 p-2 text-slate-600 dark:text-zinc-400 transition hover:bg-slate-200 dark:hover:bg-white/15 hover:text-slate-900 dark:hover:text-white"
               >
                 <EyeOff className="h-3.5 w-3.5" />
               </button>
             </div>
 
-            {/* Helper Shortcut Hints */}
+            {/* Keyboard Shortcuts Hint */}
             <div className="flex items-center justify-between text-[10px] text-slate-500 dark:text-zinc-400 px-1 pt-1 border-t border-slate-200 dark:border-white/10">
               <span>Shortcuts: Space (Play/Pause) • R (Restart) • H (Hide)</span>
               <span className="font-mono">{formatTime(elapsedSeconds)} / 02:00</span>
