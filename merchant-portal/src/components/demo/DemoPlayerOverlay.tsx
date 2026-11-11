@@ -22,6 +22,8 @@ export interface DemoStage {
   endSec: number;
 }
 
+export const TOTAL_DURATION_SECONDS = 193;
+
 export const DEMO_STAGES: DemoStage[] = [
   {
     id: 0,
@@ -33,7 +35,7 @@ export const DEMO_STAGES: DemoStage[] = [
       "Shoppers never memorize 11-character codes. Entering their email unlocks bookmarked postcodes in 1 click and frames the exact rooftop building polygon on satellite imagery.",
     metricBadge: "GET /v1/bookmarks • GET /v1/lookup",
     startSec: 0,
-    endSec: 18,
+    endSec: 31,
   },
   {
     id: 1,
@@ -44,8 +46,8 @@ export const DEMO_STAGES: DemoStage[] = [
     subtitle:
       "Raw emails and NINs are never stored (raw_pii_retained: false). Strict idempotency_key locks ensure mobile network retries never double-charge merchants or duplicate orders.",
     metricBadge: "POST /v1/widget/session • POST /orders (idempotent_replay: true)",
-    startSec: 18,
-    endSec: 36,
+    startSec: 31,
+    endSec: 62,
   },
   {
     id: 2,
@@ -56,8 +58,8 @@ export const DEMO_STAGES: DemoStage[] = [
     subtitle:
       "Empowers Instagram, TikTok, and WhatsApp vendors without websites to share a product catalog and route buyers directly into Postcode360’s spatial checkout.",
     metricBadge: "GET /v1/social-stores • Catalog → Checkout Bridge",
-    startSec: 36,
-    endSec: 52,
+    startSec: 62,
+    endSec: 87,
   },
   {
     id: 3,
@@ -68,8 +70,8 @@ export const DEMO_STAGES: DemoStage[] = [
     subtitle:
       "Matches resolved rooftop polygons to the closest available 3PL courier and emergency responder in milliseconds using PostGIS ST_DWithin and <-> KNN operators.",
     metricBadge: "GET /orders • GET /riders/nearest (<25ms)",
-    startSec: 52,
-    endSec: 68,
+    startSec: 87,
+    endSec: 110,
   },
   {
     id: 4,
@@ -80,8 +82,8 @@ export const DEMO_STAGES: DemoStage[] = [
     subtitle:
       "Postcode360 owns zero motorcycles. External logistics fleets embed our plugin for rooftop gate navigation and polygon-verified Proof of Delivery.",
     metricBadge: "POST /v1/orders/{id}/pod • <5m Gate GPS Accuracy",
-    startSec: 68,
-    endSec: 84,
+    startSec: 110,
+    endSec: 130,
   },
   {
     id: 5,
@@ -92,8 +94,8 @@ export const DEMO_STAGES: DemoStage[] = [
     subtitle:
       "Partner riders mint 90-day Temporary Postcodes (TP-ABJ-XXXX) at unmapped buildings. Every verified delivery increments trust (+1), auto-promoting the code at 3/3 deliveries to feed ground-truth data back to NIPOST.",
     metricBadge: "POST /v1/alias/mint (90d TTL) → POST /v1/verify (3/3 Auto-Promoted)",
-    startSec: 84,
-    endSec: 102,
+    startSec: 130,
+    endSec: 157,
   },
   {
     id: 6,
@@ -104,8 +106,8 @@ export const DEMO_STAGES: DemoStage[] = [
     subtitle:
       "Citizens without smartphones or mobile data dial *347*postcode# over 2G GSM to resolve addresses or route 112 trauma responders via Termii SMS.",
     metricBadge: "POST /v1/ussd • POST /v1/emergency/sos",
-    startSec: 102,
-    endSec: 112,
+    startSec: 157,
+    endSec: 174,
   },
   {
     id: 7,
@@ -116,8 +118,8 @@ export const DEMO_STAGES: DemoStage[] = [
     subtitle:
       "Built on Nigeria’s National Postcode. Ready for immediate pilot deployment across e-commerce merchants, social sellers, and logistics fleets.",
     metricBadge: "@postcode360/checkout-js • @postcode360/enumerator-sdk",
-    startSec: 112,
-    endSec: 120,
+    startSec: 174,
+    endSec: 193,
   },
 ];
 
@@ -162,6 +164,8 @@ export const DemoPlayerOverlay: React.FC = () => {
     x: typeof window !== "undefined" ? window.innerWidth / 2 : 500,
     y: typeof window !== "undefined" ? window.innerHeight / 2 : 300,
   });
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const vertexTimelineRef = useRef<gsap.core.Timeline | null>(null);
   const isPlayingRef = useRef<boolean>(false);
   const isPausedRef = useRef<boolean>(false);
   const speedRef = useRef<number>(1);
@@ -174,6 +178,27 @@ export const DemoPlayerOverlay: React.FC = () => {
   isPlayingRef.current = isPlaying;
   isPausedRef.current = isPaused;
   speedRef.current = playbackSpeed;
+
+  // Keep audio playbackRate & timeline speed synchronized
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackSpeed;
+    }
+    if (vertexTimelineRef.current) {
+      vertexTimelineRef.current.timeScale(playbackSpeed);
+    }
+  }, [playbackSpeed]);
+
+  // Pause/resume GSAP sweep timeline when demo pauses/resumes
+  useEffect(() => {
+    if (vertexTimelineRef.current) {
+      if (isPaused) {
+        vertexTimelineRef.current.pause();
+      } else {
+        vertexTimelineRef.current.play();
+      }
+    }
+  }, [isPaused]);
 
   const currentStage = DEMO_STAGES[currentStageIdx] || DEMO_STAGES[0];
 
@@ -319,10 +344,14 @@ export const DemoPlayerOverlay: React.FC = () => {
     [findElement]
   );
 
-  // Sweep cursor across 4 rooftop corners on the map canvas
+  // Sweep cursor across 4 rooftop corners on the map canvas (~5.0s staggered pace)
   const sweepRooftopVertices = useCallback(() => {
     const mapSurface = document.querySelector('[data-demo="postcode-map-surface"]');
     if (!mapSurface) return;
+
+    if (vertexTimelineRef.current) {
+      vertexTimelineRef.current.kill();
+    }
 
     const mapRect = mapSurface.getBoundingClientRect();
     const cx = mapRect.left + mapRect.width / 2;
@@ -330,28 +359,39 @@ export const DemoPlayerOverlay: React.FC = () => {
     const r = Math.min(mapRect.width, mapRect.height) * 0.18;
 
     const tl = gsap.timeline();
+    vertexTimelineRef.current = tl;
+    tl.timeScale(speedRef.current);
+
     tl.to(cursorRef.current, {
       x: cx - r,
       y: cy - r,
-      duration: 0.35 / speedRef.current,
+      duration: 1.25,
+      ease: "power2.inOut",
+      onStart: () => setCursorLabel("Tapping Rooftop Corner V1 (Northwest)..."),
       onUpdate: () => setCursorPos({ ...cursorRef.current }),
     })
       .to(cursorRef.current, {
         x: cx + r,
         y: cy - r * 0.8,
-        duration: 0.35 / speedRef.current,
+        duration: 1.25,
+        ease: "power2.inOut",
+        onStart: () => setCursorLabel("Tapping Rooftop Corner V2 (Northeast)..."),
         onUpdate: () => setCursorPos({ ...cursorRef.current }),
       })
       .to(cursorRef.current, {
         x: cx + r * 0.9,
         y: cy + r,
-        duration: 0.35 / speedRef.current,
+        duration: 1.25,
+        ease: "power2.inOut",
+        onStart: () => setCursorLabel("Tapping Rooftop Corner V3 (Southeast)..."),
         onUpdate: () => setCursorPos({ ...cursorRef.current }),
       })
       .to(cursorRef.current, {
         x: cx - r * 0.8,
         y: cy + r * 0.7,
-        duration: 0.35 / speedRef.current,
+        duration: 1.25,
+        ease: "power2.inOut",
+        onStart: () => setCursorLabel("Tapping Rooftop Corner V4 (Southwest) • Capturing Gate GPS..."),
         onUpdate: () => setCursorPos({ ...cursorRef.current }),
       });
   }, []);
@@ -367,14 +407,14 @@ export const DemoPlayerOverlay: React.FC = () => {
     } catch {}
   }, []);
 
-  // 120-Second Timestamp Schedule Table (Section 4)
+  // 193-Second (03:13) Voiceover-Locked Timestamp Schedule Table
   const SCHEDULE_CUES: ScheduleCue[] = [
-    // Stage 1 (0s – 18s)
+    // Stage 1 (0s – 31s) | Intro & Customer Checkout
     {
-      atSeconds: 0.5,
+      atSeconds: 0.1,
       label: "Opening Customer Checkout...",
       run: (h) => {
-        h.performCueClick("tab-checkout", "Opening Spatial Checkout...", {
+        h.performCueClick("tab-checkout", "Postcode360 — The Paystack for Addressing...", {
           extraAction: () => {
             setTimeout(() => {
               const custMode = findElement("mode-customer");
@@ -385,158 +425,204 @@ export const DemoPlayerOverlay: React.FC = () => {
       },
     },
     {
-      atSeconds: 3.0,
+      atSeconds: 6.5,
+      label: "Highlighting Plug-and-Play Checkout...",
+      run: (h) => {
+        setCursorLabel("Built for Nigerian Small Businesses...");
+        h.moveCursorToElement("customer-confirm-order", 1.2);
+      },
+    },
+    {
+      atSeconds: 14.0,
+      label: "Focusing Email Bookmark Lookup...",
+      run: (h) => {
+        setCursorLabel("Shoppers enter email — no 11-char memorization needed...");
+        h.moveCursorToElement("customer-sync-email", 1.2);
+      },
+    },
+    {
+      atSeconds: 18.5,
       label: "Syncing Saved Bookmarks...",
       run: (h) => {
-        h.performCueClick("customer-sync-email", "Syncing Saved Postcodes for buyer@gmail.com...");
+        h.performCueClick("customer-sync-email", "Unlocking Saved Postcodes via Buyer Email...");
       },
     },
     {
-      atSeconds: 6.5,
+      atSeconds: 21.2,
       label: "Resolving Office (CBD)...",
       run: (h) => {
-        h.performCueClick("bookmark-office", "Resolving Office (CBD) Postcode & Rooftop Polygon...");
+        h.performCueClick("bookmark-office", "1-Click Unlock: Office (CBD) Postcode...");
       },
     },
     {
-      atSeconds: 10.5,
+      atSeconds: 24.0,
       label: "Resolving Home (Wuse II)...",
       run: (h) => {
-        h.performCueClick("bookmark-home", "Resolving Home (Wuse II) Postcode & Rooftop Polygon...");
+        h.performCueClick("bookmark-home", "Resolving Exact Building Rooftop Polygon on Satellite...");
       },
     },
     {
-      atSeconds: 14.5,
+      atSeconds: 27.5,
       label: "Confirming Order...",
       run: (h) => {
-        h.performCueClick("customer-confirm-order", "Submitting Order & Discarding PII...", {
+        h.performCueClick("customer-confirm-order", "Confirming Delivery Address in Seconds...", {
           extraAction: () => {
             h.triggerConfetti(55);
             setTimeout(() => {
               const closeBtn = findElement("customer-close-receipt");
               if (closeBtn) closeBtn.click();
-            }, 1800);
+            }, 2200);
           },
         });
       },
     },
 
-    // Stage 2 (18s – 36s)
+    // Stage 2 (31s – 62s) | Zero-PII Hashing, 5-Segment NIPOST & Idempotency
     {
-      atSeconds: 18.5,
+      atSeconds: 31.05,
       label: "Switching to Developer Mode...",
       run: (h) => {
-        h.performCueClick("mode-developer", "Switching to Developer Mode Inspector...");
+        if (!findElement("mode-developer")) {
+          const checkoutTab = findElement("tab-checkout");
+          if (checkoutTab) checkoutTab.click();
+        }
+        setTimeout(() => {
+          h.performCueClick("mode-developer", "Under the Hood: Zero-PII Architecture Inspector...");
+        }, 120);
       },
     },
     {
-      atSeconds: 22.0,
+      atSeconds: 36.0,
       label: "Verifying Session Token...",
       run: (h) => {
-        h.performCueClick("dev-verify-session", "Verifying HMAC-SHA256 Cryptographic Session...");
+        h.performCueClick("dev-verify-session", "Hashing Emails & NINs via HMAC-SHA256 (0 Raw PII)...");
       },
     },
     {
-      atSeconds: 26.0,
+      atSeconds: 41.5,
+      label: "Inspecting Zero-PII Payload...",
+      run: (h) => {
+        setCursorLabel("Merchants never store raw personal data...");
+        h.moveCursorToElement("dev-open-drawer", 1.2);
+      },
+    },
+    {
+      atSeconds: 46.0,
       label: "Inspecting 5-Segment Hierarchy...",
       run: (h) => {
-        h.performCueClick("dev-open-drawer", "Inspecting Preloaded 5-Segment Postcodes...");
-      },
-    },
-    {
-      atSeconds: 29.0,
-      label: "Closing Directory Drawer...",
-      run: (h) => {
-        h.performCueClick("dev-close-drawer", "Closing Directory Drawer...");
-      },
-    },
-    {
-      atSeconds: 31.0,
-      label: "Dispatching Spatial Order...",
-      run: (h) => {
-        h.performCueClick("dev-create-order", "Dispatching Idempotent Spatial Order (₦180,000)...");
-      },
-    },
-    {
-      atSeconds: 33.5,
-      label: "Simulating Idempotent Double-Tap...",
-      run: (h) => {
-        h.performCueClick(
-          "dev-retry-order",
-          "Simulating Network Retry / Double-Tap Pay (₦0 Extra Charged)..."
-        );
-      },
-    },
-
-    // Stage 3 (36s – 52s)
-    {
-      atSeconds: 36.5,
-      label: "Opening Social Storefront...",
-      run: (h) => {
-        h.performCueClick("tab-storefront", "Opening Social Media Vendor Storefront...");
-      },
-    },
-    {
-      atSeconds: 40.0,
-      label: "Copying Store Bio Link...",
-      run: (h) => {
-        h.performCueClick(
-          "store-share-link",
-          "Copying Storefront Bio Link (postcode360.ng/store/luxe-abuja)..."
-        );
-      },
-    },
-    {
-      atSeconds: 44.0,
-      label: "Copying Product Catalog Link...",
-      run: (h) => {
-        h.performCueClick("store-product-link-0", "Copying Direct Product Link (Bone Straight Wig)...");
-      },
-    },
-    {
-      atSeconds: 47.5,
-      label: "Copying WhatsApp Payment Link...",
-      run: (h) => {
-        h.performCueClick("store-payment-link-0", "Copying Direct WhatsApp Payment Link...");
+        h.performCueClick("dev-open-drawer", "Resolving All 5 NIPOST Postcode Segments Nationwide...");
       },
     },
     {
       atSeconds: 50.0,
-      label: "Bridging to Spatial Checkout...",
+      label: "Closing Directory Drawer...",
       run: (h) => {
-        h.performCueClick("store-open-checkout-0", "Bridging Buyer from Social Link to Checkout...");
+        h.performCueClick("dev-close-drawer", "Closing NIPOST Segment Directory...");
       },
     },
-
-    // Stage 4 (52s – 68s)
     {
-      atSeconds: 52.5,
-      label: "Navigating to Back-Office Admin...",
+      atSeconds: 53.0,
+      label: "Dispatching Spatial Order...",
       run: (h) => {
-        h.performCueClick("tab-admin", "Navigating to Back-Office Admin...");
+        h.performCueClick("dev-create-order", "Executing Idempotent Spatial Order (₦180,000)...");
       },
     },
     {
       atSeconds: 57.0,
-      label: "Inspecting Live Spatial Order...",
+      label: "Simulating Idempotent Double-Tap...",
       run: (h) => {
-        h.performCueClick("admin-order-row-0", "Inspecting Incoming Spatial Order & Delivery Route...");
-      },
-    },
-    {
-      atSeconds: 63.0,
-      label: "Assigning PostGIS KNN Rider...",
-      run: (h) => {
-        h.performCueClick("admin-assign-rider", "Executing PostGIS GiST KNN Rider Match (Musa Danjuma)...");
+        h.performCueClick(
+          "dev-retry-order",
+          "Idempotency Lock: Intercepting Double-Tap (₦0 Duplicate Charge)..."
+        );
       },
     },
 
-    // Stage 5 (68s – 84s)
+    // Stage 3 (62s – 87s) | Plug-and-Play Social Storefront
     {
-      atSeconds: 68.5,
+      atSeconds: 62.05,
+      label: "Opening Social Storefront...",
+      run: (h) => {
+        h.performCueClick("tab-storefront", "Plug-and-Play Storefront for Instagram & WhatsApp...");
+      },
+    },
+    {
+      atSeconds: 67.5,
+      label: "Showcasing Social Merchant Catalog...",
+      run: (h) => {
+        setCursorLabel("No Website Needed — Instant Spatial Storefront...");
+        h.moveCursorToElement("store-share-link", 1.3);
+      },
+    },
+    {
+      atSeconds: 72.5,
+      label: "Copying Store Bio Link...",
+      run: (h) => {
+        h.performCueClick(
+          "store-share-link",
+          "Sharing Catalog Bio Link (postcode360.ng/store/luxe-abuja)..."
+        );
+      },
+    },
+    {
+      atSeconds: 76.5,
+      label: "Copying Product Catalog Link...",
+      run: (h) => {
+        h.performCueClick("store-product-link-0", "Sharing Direct Product Link in Social Bio...");
+      },
+    },
+    {
+      atSeconds: 79.5,
+      label: "Copying WhatsApp Payment Link...",
+      run: (h) => {
+        h.performCueClick("store-payment-link-0", "Direct DM Payment Link Ready...");
+      },
+    },
+    {
+      atSeconds: 82.5,
+      label: "Bridging to Spatial Checkout...",
+      run: (h) => {
+        h.performCueClick("store-open-checkout-0", "Bringing Social Buyers Straight into Spatial Checkout...");
+      },
+    },
+
+    // Stage 4 (87s – 110s) | Admin Ledger & PostGIS KNN Query
+    {
+      atSeconds: 87.05,
+      label: "Navigating to Back-Office Admin...",
+      run: (h) => {
+        h.performCueClick("tab-admin", "Every Verified Checkout Flows into Admin Ledger...");
+      },
+    },
+    {
+      atSeconds: 92.5,
+      label: "Inspecting Live Spatial Order...",
+      run: (h) => {
+        h.performCueClick("admin-order-row-0", "PostGIS Spatial Engine Inspecting Rooftop Polygon...");
+      },
+    },
+    {
+      atSeconds: 97.0,
+      label: "Running Sub-25ms KNN Proximity Query...",
+      run: (h) => {
+        setCursorLabel("Running Sub-25ms PostGIS <-> KNN Courier Match...");
+        h.moveCursorToElement("postcode-map-surface", 1.3);
+      },
+    },
+    {
+      atSeconds: 102.0,
+      label: "Assigning PostGIS KNN Rider...",
+      run: (h) => {
+        h.performCueClick("admin-assign-rider", "Informing Closest Partner Courier in Proximity...");
+      },
+    },
+
+    // Stage 5 (110s – 130s) | 3PL Enumerator SDK & Gate Proof of Delivery
+    {
+      atSeconds: 110.05,
       label: "Entering 3PL Dispatch Hub...",
       run: (h) => {
-        h.performCueClick("tab-dispatch", "Entering 3PL Dispatch Hub & Rider Fleet...", {
+        h.performCueClick("tab-dispatch", "Zero Motorcycles Owned — Drop-In 3PL Enumerator SDK...", {
           extraAction: () => {
             setTimeout(() => {
               const riderSub = findElement("dispatch-subtab-rider");
@@ -547,69 +633,90 @@ export const DemoPlayerOverlay: React.FC = () => {
       },
     },
     {
-      atSeconds: 72.0,
+      atSeconds: 116.5,
       label: "Syncing 3PL Fleet...",
       run: (h) => {
-        h.performCueClick("rider-sync-fleet", "Syncing 3PL Partner Courier Telemetry...");
+        h.performCueClick("rider-sync-fleet", "Plugging SDK into Partner Courier Rider Apps...");
       },
     },
     {
-      atSeconds: 76.0,
-      label: "Sending High-Precision GPS Heartbeat...",
+      atSeconds: 120.5,
+      label: "Broadcasting Live GPS Heartbeat...",
       run: (h) => {
-        h.performCueClick("rider-ping-gps", "Sending Live High-Precision GPS Heartbeat...");
+        h.performCueClick("rider-ping-gps", "Couriers Broadcasting Live GPS Heartbeats...");
       },
     },
     {
-      atSeconds: 80.0,
-      label: "Capturing Gate Proof of Delivery...",
+      atSeconds: 124.5,
+      label: "Verifying Proof of Delivery (<5m)...",
       run: (h) => {
-        h.performCueClick("rider-complete-pod", "Capturing Gate Proof of Delivery (4.99m Accuracy)...");
+        h.performCueClick("rider-complete-pod", "Navigating to Roof & Verifying POD Within 5m of Gate...");
       },
     },
 
-    // Stage 6 (84s – 102s)
+    // Stage 6 (130s – 157s) | Unmapped Rooftop Vertex Tapping, TP-Code Minting & 3/3 Promotion
     {
-      atSeconds: 84.5,
+      atSeconds: 130.05,
       label: "Tracing 4 Rooftop Corners (V1–V4)...",
       run: (h) => {
-        h.performCueClick("rider-trace-vertices", "Tracing 4 Rooftop Corners (V1–V4) on Satellite...", {
-          extraAction: () => {
-            setTimeout(() => {
-              h.sweepRooftopVertices();
-            }, 300);
-          },
-        });
+        const triggerTrace = () => {
+          h.performCueClick("rider-trace-vertices", "Tapping 4 Rooftop Corners on Unmapped Building...", {
+            extraAction: () => {
+              setTimeout(() => {
+                h.sweepRooftopVertices();
+              }, 350);
+            },
+          });
+        };
+        if (!findElement("rider-trace-vertices")) {
+          const dispTab = findElement("tab-dispatch");
+          if (dispTab) dispTab.click();
+          setTimeout(() => {
+            const riderSub = findElement("dispatch-subtab-rider");
+            if (riderSub) riderSub.click();
+            setTimeout(triggerTrace, 200);
+          }, 200);
+        } else {
+          triggerTrace();
+        }
       },
     },
     {
-      atSeconds: 90.0,
-      label: "Minting Temporary Postcode (TP-ABJ)...",
+      atSeconds: 138.0,
+      label: "Capturing Gate GPS & POD Photo...",
       run: (h) => {
-        h.performCueClick("rider-mint-tp", "Minting Temporary Postcode (TP-ABJ-XXXX • 90d TTL)...");
+        setCursorLabel("Capturing Gate GPS, Gate Photo & Proof of Delivery...");
+        h.moveCursorToElement("rider-mint-tp", 1.2);
       },
     },
     {
-      atSeconds: 94.0,
+      atSeconds: 142.5,
+      label: "Minting 90-Day Temporary Postcode...",
+      run: (h) => {
+        h.performCueClick("rider-mint-tp", "Minting 90-Day Temporary Postcode (TP-ABJ-XXXX)...");
+      },
+    },
+    {
+      atSeconds: 147.0,
       label: "Logging Verified Delivery 1/3...",
       run: (h) => {
-        h.performCueClick("rider-verify-tp-0", "Logging Verified Delivery 1/3 (Trust +1)...");
+        h.performCueClick("rider-verify-tp-0", "Verified Delivery 1/3...");
       },
     },
     {
-      atSeconds: 96.5,
+      atSeconds: 149.8,
       label: "Logging Verified Delivery 2/3...",
       run: (h) => {
-        h.performCueClick("rider-verify-tp-0", "Logging Verified Delivery 2/3 (Trust +1)...");
+        h.performCueClick("rider-verify-tp-0", "Verified Delivery 2/3...");
       },
     },
     {
-      atSeconds: 99.0,
+      atSeconds: 152.5,
       label: "Auto-Promoting to VERIFIED ALIAS (3/3)...",
       run: (h) => {
         h.performCueClick(
           "rider-verify-tp-0",
-          "Logging Verified Delivery 3/3 — Auto-Promoted to VERIFIED ALIAS!",
+          "3/3 Deliveries — Auto-Promoted to Permanent Alias (NIPOST Sync)!",
           {
             extraAction: () => {
               h.triggerConfetti(85);
@@ -619,62 +726,78 @@ export const DemoPlayerOverlay: React.FC = () => {
       },
     },
 
-    // Stage 7 (102s – 112s)
+    // Stage 7 (157s – 174s) | Offline USSD *347# & 2G Emergency Alert
     {
-      atSeconds: 102.5,
+      atSeconds: 157.05,
       label: "Opening Offline USSD & Emergency Rescue...",
       run: (h) => {
-        h.performCueClick(
-          "dispatch-subtab-rescue",
-          "Opening Offline USSD *347# & Emergency Rescue Console..."
-        );
+        const triggerRescue = () => {
+          h.performCueClick(
+            "dispatch-subtab-rescue",
+            "Offline Inclusion & 1-Tap 112 Emergency Response..."
+          );
+        };
+        if (!findElement("dispatch-subtab-rescue")) {
+          const dispTab = findElement("tab-dispatch");
+          if (dispTab) dispTab.click();
+          setTimeout(triggerRescue, 200);
+        } else {
+          triggerRescue();
+        }
       },
     },
     {
-      atSeconds: 105.5,
-      label: "Triggering 2G SMS SOS...",
+      atSeconds: 161.5,
+      label: "Triggering Termii 2G SMS Alert...",
       run: (h) => {
         h.performCueClick(
           "rescue-trigger-sos",
-          "Triggering 1-Tap SOS & Broadcast Termii 2G SMS to 112 Units..."
+          "Triggering 1-Tap Termii 2G SMS Alert to 112 Units..."
         );
       },
     },
     {
-      atSeconds: 108.0,
-      label: "Dialing 2G GSM USSD *347#...",
+      atSeconds: 166.0,
+      label: "Dialing USSD *347# on Feature Phone...",
       run: (h) => {
-        h.performCueClick("rescue-dial-ussd", "Dialing Zero-Data USSD *347*postcode# Session...");
+        h.performCueClick("rescue-dial-ussd", "Dialing *347# on Any Feature Phone Without Internet...");
       },
     },
     {
-      atSeconds: 110.5,
+      atSeconds: 170.5,
       label: "Resolving Emergency Incident...",
       run: (h) => {
-        h.performCueClick("rescue-resolve-incident", "Resolving Incident & Incrementing Trust Score +1...");
+        h.performCueClick("rescue-resolve-incident", "Resolving Emergency Dispatch & Trust Score +1...");
       },
     },
 
-    // Stage 8 (112s – 120s)
+    // Stage 8 (174s – 193s) | 5-Min Plugins & Hero Closing
     {
-      atSeconds: 112.5,
-      label: "Opening Drop-In Plugins...",
+      atSeconds: 174.05,
+      label: "Opening 5-Minute Drop-In Plugins...",
       run: (h) => {
-        h.performCueClick("tab-plugins", "Opening Drop-In Plugins & Integrations...");
+        h.performCueClick("tab-plugins", "5-Minute Plugins for WooCommerce...");
       },
     },
     {
-      atSeconds: 115.0,
+      atSeconds: 177.5,
       label: "Inspecting Shopify Integration...",
       run: (h) => {
-        h.performCueClick("plugin-tab-shopify", "Inspecting Shopify Liquid Checkout App Block...");
+        h.performCueClick("plugin-tab-shopify", "Drop-In Shopify App Block Integration...");
       },
     },
     {
-      atSeconds: 117.5,
+      atSeconds: 181.5,
+      label: "Inspecting 3PL & Existing IT Infrastructure SDK...",
+      run: (h) => {
+        h.performCueClick("plugin-tab-enumerator", "3PL Fleets & Existing Business IT Infrastructure SDK...");
+      },
+    },
+    {
+      atSeconds: 186.5,
       label: "Returning to Customer Checkout...",
       run: (h) => {
-        h.performCueClick("tab-checkout", "Returning to Customer Checkout for Closing Hero Frame...", {
+        h.performCueClick("tab-checkout", "Postcode360 — Nigeria's National Postcode, Plug & Play from Day 1!", {
           extraAction: () => {
             setTimeout(() => {
               const custMode = findElement("mode-customer");
@@ -686,7 +809,7 @@ export const DemoPlayerOverlay: React.FC = () => {
     },
   ];
 
-  // Continuous Master Clock via requestAnimationFrame (0.0 to 120.0s)
+  // Continuous Master Clock via requestAnimationFrame synced directly to <audio> (0.0 to 193.0s)
   useEffect(() => {
     if (!isPlaying) {
       if (rafRef.current) {
@@ -717,10 +840,17 @@ export const DemoPlayerOverlay: React.FC = () => {
         lastTimestampRef.current = now;
       }
 
-      const deltaSec = (now - lastTimestampRef.current) / 1000;
+      let newElapsed: number;
+      const audio = audioRef.current;
+      if (audio && !audio.paused && audio.readyState >= 1) {
+        // Lock animation clock directly to hardware audio playback (zero drift)
+        newElapsed = audio.currentTime;
+      } else {
+        const deltaSec = (now - lastTimestampRef.current) / 1000;
+        newElapsed = elapsedSecondsRef.current + deltaSec * speedRef.current;
+      }
       lastTimestampRef.current = now;
 
-      const newElapsed = elapsedSecondsRef.current + deltaSec * speedRef.current;
       elapsedSecondsRef.current = newElapsed;
       setElapsedSeconds(newElapsed);
 
@@ -739,10 +869,10 @@ export const DemoPlayerOverlay: React.FC = () => {
         }
       }
 
-      // Check if full 120.0 seconds completed
-      if (newElapsed >= 120.0) {
-        elapsedSecondsRef.current = 120.0;
-        setElapsedSeconds(120.0);
+      // Check if full 193.0 seconds (03:13) completed
+      if (newElapsed >= TOTAL_DURATION_SECONDS || audio?.ended) {
+        elapsedSecondsRef.current = TOTAL_DURATION_SECONDS;
+        setElapsedSeconds(TOTAL_DURATION_SECONDS);
         setIsPlaying(false);
         setDemoComplete(true);
         setCursorVisible(false);
@@ -778,10 +908,31 @@ export const DemoPlayerOverlay: React.FC = () => {
     setIsPaused(false);
     setIsPlaying(true);
     setCursorVisible(true);
+
+    const audio = audioRef.current;
+    if (audio) {
+      audio.currentTime = 0;
+      audio.playbackRate = speedRef.current;
+      audio.play().catch((err) => {
+        console.warn("[DemoPlayer] Audio playback unavailable:", err);
+      });
+    }
   };
 
   const handlePauseResume = () => {
-    setIsPaused((prev) => !prev);
+    setIsPaused((prev) => {
+      const nextPaused = !prev;
+      const audio = audioRef.current;
+      if (audio) {
+        if (nextPaused) {
+          audio.pause();
+        } else {
+          audio.playbackRate = speedRef.current;
+          audio.play().catch(() => {});
+        }
+      }
+      return nextPaused;
+    });
   };
 
   const handleStop = () => {
@@ -789,6 +940,17 @@ export const DemoPlayerOverlay: React.FC = () => {
       cancelAnimationFrame(rafRef.current);
       rafRef.current = null;
     }
+    if (vertexTimelineRef.current) {
+      vertexTimelineRef.current.kill();
+      vertexTimelineRef.current = null;
+    }
+
+    const audio = audioRef.current;
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+
     lastTimestampRef.current = null;
     elapsedSecondsRef.current = 0;
     setElapsedSeconds(0);
@@ -812,29 +974,53 @@ export const DemoPlayerOverlay: React.FC = () => {
     }, 120);
   };
 
-  const handleJumpStage = (stageIdx: number) => {
-    const targetStage = DEMO_STAGES[stageIdx];
-    if (!targetStage) return;
+  const seekToSeconds = (targetSec: number) => {
+    const clampedSec = Math.min(TOTAL_DURATION_SECONDS, Math.max(0, targetSec));
+    elapsedSecondsRef.current = clampedSec;
+    setElapsedSeconds(clampedSec);
 
-    const targetSec = targetStage.startSec;
-    elapsedSecondsRef.current = targetSec;
-    setElapsedSeconds(targetSec);
-    setCurrentStageIdx(stageIdx);
+    const activeStage =
+      DEMO_STAGES.find((st) => clampedSec >= st.startSec && clampedSec < st.endSec) ||
+      DEMO_STAGES[DEMO_STAGES.length - 1];
+    setCurrentStageIdx(activeStage.id);
 
     // Mark previous cues as fired, and remaining cues as unfired
     const nextFired = new Set<number>();
     for (let i = 0; i < SCHEDULE_CUES.length; i++) {
-      if (SCHEDULE_CUES[i].atSeconds < targetSec) {
+      if (SCHEDULE_CUES[i].atSeconds < clampedSec) {
         nextFired.add(i);
       }
     }
     firedCuesRef.current = nextFired;
 
-    if (!isPlaying) {
+    const audio = audioRef.current;
+    if (audio) {
+      audio.currentTime = clampedSec;
+      if (!isPausedRef.current) {
+        audio.playbackRate = speedRef.current;
+        audio.play().catch(() => {});
+      }
+    }
+
+    if (!isPlayingRef.current) {
+      setDemoComplete(false);
       setIsPlaying(true);
       setIsPaused(false);
       setCursorVisible(true);
     }
+  };
+
+  const handleJumpStage = (stageIdx: number) => {
+    const targetStage = DEMO_STAGES[stageIdx];
+    if (!targetStage) return;
+    seekToSeconds(targetStage.startSec);
+  };
+
+  const handleProgressBarScrub = (e: React.MouseEvent<HTMLDivElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (!rect.width) return;
+    const ratio = Math.min(1, Math.max(0, (e.clientX - rect.left) / rect.width));
+    seekToSeconds(ratio * TOTAL_DURATION_SECONDS);
   };
 
   // Keyboard shortcut listeners: Space, R, H
@@ -870,7 +1056,7 @@ export const DemoPlayerOverlay: React.FC = () => {
   }, [isPlaying]);
 
   const formatTime = (totalSec: number) => {
-    const clamped = Math.min(120, Math.max(0, totalSec));
+    const clamped = Math.min(TOTAL_DURATION_SECONDS, Math.max(0, totalSec));
     const mins = Math.floor(clamped / 60);
     const secs = Math.floor(clamped % 60);
     return `${mins}:${secs < 10 ? "0" : ""}${secs}`;
@@ -878,6 +1064,9 @@ export const DemoPlayerOverlay: React.FC = () => {
 
   return (
     <>
+      {/* Synchronized Voiceover Audio Track (3:13 / 193s) */}
+      <audio ref={audioRef} src="/demo-voiceover.mp3" preload="auto" />
+
       {/* High-Contrast Target Glow Outline */}
       <style>{`
         .demo-target-highlight {
@@ -969,27 +1158,35 @@ export const DemoPlayerOverlay: React.FC = () => {
             </div>
 
             <span className="ml-4 font-mono font-bold text-white">
-              {formatTime(elapsedSeconds)} / 02:00
+              {formatTime(elapsedSeconds)} / 03:13
             </span>
           </div>
         </div>
       )}
 
-      {/* Layer D — 120-Second Timeline Progress Bar Along Bottom Edge */}
-      <div className="fixed bottom-0 left-0 right-0 h-[3px] bg-slate-900/80 z-[10001] overflow-hidden pointer-events-auto">
+      {/* Layer D — 193-Second (03:13) Timeline Progress Bar Along Bottom Edge */}
+      <div
+        onClick={handleProgressBarScrub}
+        className="fixed bottom-0 left-0 right-0 h-[3px] bg-slate-900/80 z-[10001] overflow-hidden pointer-events-auto cursor-pointer"
+      >
         <div
           className="h-full bg-gradient-to-r from-emerald-500 via-teal-400 to-cyan-500 transition-all duration-100 ease-linear shadow-[0_0_8px_rgba(16,185,129,0.8)]"
-          style={{ width: `${(Math.min(120, elapsedSeconds) / 120) * 100}%` }}
+          style={{
+            width: `${(Math.min(TOTAL_DURATION_SECONDS, elapsedSeconds) / TOTAL_DURATION_SECONDS) * 100}%`,
+          }}
         />
         {/* Chapter Markers for All 8 Stages */}
         {DEMO_STAGES.map((st, idx) => {
-          const leftPercent = (st.startSec / 120) * 100;
+          const leftPercent = (st.startSec / TOTAL_DURATION_SECONDS) * 100;
 
           return (
             <div
               key={st.id}
               title={`Jump to Stage ${st.number}: ${st.shortName}`}
-              onClick={() => handleJumpStage(idx)}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleJumpStage(idx);
+              }}
               className="absolute top-0 bottom-0 w-[2px] bg-white/25 hover:bg-emerald-400 cursor-pointer pointer-events-auto transition-colors"
               style={{ left: `${leftPercent}%` }}
             />
@@ -1084,7 +1281,7 @@ export const DemoPlayerOverlay: React.FC = () => {
             <div className="flex items-center justify-between text-[10px] text-zinc-400 px-0.5 pt-0.5 border-t border-white/10">
               <span>Space (Play/Pause) • R (Restart) • H (Hide)</span>
               <span className="font-mono text-emerald-400 font-bold">
-                {formatTime(elapsedSeconds)} / 02:00
+                {formatTime(elapsedSeconds)} / 03:13
               </span>
             </div>
           </div>
